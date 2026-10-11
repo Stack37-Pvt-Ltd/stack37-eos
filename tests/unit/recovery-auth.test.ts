@@ -76,7 +76,7 @@ describe('Cryptographic Password Recovery Token System', () => {
       expect(verifyRecoveryToken(token, userId)).toBe(true);
 
       // Mutate recovery secret: verification must fail (proving dependency on dedicated secret, not service role key)
-      process.env.EOS_RECOVERY_SECRET = 'different-signing-secret-456';
+      process.env.EOS_RECOVERY_SECRET = 'different-signing-secret-456-32chars';
       expect(verifyRecoveryToken(token, userId)).toBe(false);
     } finally {
       process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRoleKey;
@@ -88,29 +88,37 @@ describe('Cryptographic Password Recovery Token System', () => {
     }
   });
 
-  it('fails securely in production when EOS_RECOVERY_SECRET is missing or insufficiently strong (<32 chars)', () => {
+  it('fails securely in production or when connected to live EOS project when secret is missing or <32 chars', () => {
     const originalNodeEnv = process.env.NODE_ENV;
+    const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const originalRecoverySecret = process.env.EOS_RECOVERY_SECRET;
     const originalAuthSecret = process.env.AUTH_SECRET;
 
     try {
-      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
       delete process.env.EOS_RECOVERY_SECRET;
       delete process.env.AUTH_SECRET;
 
-      // 1. Missing secret in production must throw
-      expect(() => createRecoveryToken('user-123', 900)).toThrow(/Missing EOS_RECOVERY_SECRET in production/);
+      // 1. Live EOS project check: when URL is live project, missing secret must throw
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://xbiadendaxhoyrcvaybf.supabase.co';
+      expect(() => createRecoveryToken('user-123', 900)).toThrow(/Missing EOS_RECOVERY_SECRET/);
 
-      // 2. Weak secret (<32 chars) in production must throw
+      // 2. Weak secret (<32 chars) on live EOS project must throw
       process.env.EOS_RECOVERY_SECRET = 'short-secret';
       expect(() => createRecoveryToken('user-123', 900)).toThrow(/at least 32 characters long/);
 
-      // 3. Strong secret (>=32 chars) in production must succeed
+      // 3. Strong secret (>=32 chars) on live EOS project must succeed
       process.env.EOS_RECOVERY_SECRET = 'this-is-a-very-strong-production-recovery-secret-32ch';
       const token = createRecoveryToken('user-123', 900);
       expect(verifyRecoveryToken(token, 'user-123')).toBe(true);
+
+      // 4. Production check: missing secret in production must throw
+      delete process.env.EOS_RECOVERY_SECRET;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://mock.supabase.co';
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+      expect(() => createRecoveryToken('user-123', 900)).toThrow(/Missing EOS_RECOVERY_SECRET/);
     } finally {
       (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
+      process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
       if (originalRecoverySecret !== undefined) {
         process.env.EOS_RECOVERY_SECRET = originalRecoverySecret;
       } else {

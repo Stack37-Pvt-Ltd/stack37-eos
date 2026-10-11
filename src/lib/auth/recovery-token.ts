@@ -12,9 +12,12 @@ export const RECOVERY_COOKIE_NAME = 'sb-recovery-token';
  * 2. Uses EOS_RECOVERY_SECRET or AUTH_SECRET, falling back to a dedicated fallback in non-production.
  */
 function getRecoverySecret(): string {
+  const isLiveEos = process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('xbiadendaxhoyrcvaybf');
+  const isProduction = process.env.NODE_ENV === 'production';
   const secret = process.env.EOS_RECOVERY_SECRET || process.env.AUTH_SECRET;
+
   if (secret) {
-    if (process.env.NODE_ENV === 'production' && secret.length < 32) {
+    if ((isProduction || isLiveEos) && secret.length < 32) {
       throw new Error(
         'EOS_RECOVERY_SECRET must be at least 32 characters long for cryptographic security.'
       );
@@ -22,14 +25,16 @@ function getRecoverySecret(): string {
     return secret;
   }
 
-  // Fail securely in production: never allow fallback secret
-  if (process.env.NODE_ENV === 'production') {
+  // Fail securely: In production or when connected to the live EOS Supabase project,
+  // predictable fallback secrets are strictly prohibited.
+  if (isProduction || isLiveEos) {
     throw new Error(
-      'Missing EOS_RECOVERY_SECRET in production. A dedicated server-only secret of at least 32 characters is required.'
+      'Missing EOS_RECOVERY_SECRET. When connected to the live EOS Supabase project or in production, an explicitly configured, dedicated server-only secret of at least 32 characters is required.'
     );
   }
 
-  return 'stack37-eos-dedicated-recovery-token-signing-secret';
+  // Isolated fallback for disconnected local unit tests only
+  return 'stack37-eos-dedicated-recovery-token-signing-secret-unit-test-only';
 }
 
 /**
