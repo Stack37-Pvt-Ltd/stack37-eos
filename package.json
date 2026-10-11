@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run tests/unit/",
     "test:db": "vitest run --test-timeout=30000 --hook-timeout=60000 tests/db/tenant-isolation.test.ts"
   },
   "dependencies": {

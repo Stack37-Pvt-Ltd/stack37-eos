@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { updateSession } from './lib/supabase/proxy';
 
 const RESERVED_SUBDOMAINS = new Set([
   'www',
@@ -10,7 +11,7 @@ const RESERVED_SUBDOMAINS = new Set([
   'mybusiness',
 ]);
 
-export default function proxy(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   
   // Get host safely
@@ -43,25 +44,56 @@ export default function proxy(request: NextRequest) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
-  // 2. mybusiness subdomain -> registration route
-  if (subdomain === 'mybusiness') {
-    url.pathname = `/registration${url.pathname === '/' ? '' : url.pathname}`;
-    return NextResponse.rewrite(url);
-  }
-
-  // 3. Reserved subdomains (other than mybusiness) -> block or handle
-  if (RESERVED_SUBDOMAINS.has(subdomain)) {
+  // 2. Reserved subdomains (other than mybusiness) -> block or handle
+  if (RESERVED_SUBDOMAINS.has(subdomain) && subdomain !== 'mybusiness') {
     return new NextResponse('Not Found', { status: 404 });
   }
 
-  // 4. Tenant subdomain -> tenant route
-  if (subdomain && subdomain !== baseDomain) {
+  // 3. Security: Sanitize client-supplied tenant headers
+  // Client-supplied tenant identity headers are never authoritative.
+  request.headers.delete('x-tenant-slug');
+
+  // Determine target path
+  let targetUrl: URL | null = null;
+  if (subdomain === 'mybusiness') {
+    // mybusiness subdomain -> registration route
+    url.pathname = `/registration${url.pathname === '/' ? '' : url.pathname}`;
+    targetUrl = url;
+  } else if (subdomain && subdomain !== baseDomain) {
+    // Tenant subdomain -> tenant route
     url.pathname = `/tenant/${subdomain}${url.pathname === '/' ? '' : url.pathname}`;
-    return NextResponse.rewrite(url);
+    targetUrl = url;
   }
 
-  // 5. Default / no subdomain -> return 404 for this app
-  return new NextResponse('Not Found (STACK37 EOS requires a valid subdomain)', { status: 404 });
+  // 4. Default / no subdomain -> return 404 for this app
+  if (!targetUrl) {
+    return new NextResponse('Not Found (STACK37 EOS requires a valid subdomain)', { status: 404 });
+  }
+
+  // 5. Synchronize Supabase session and refresh tokens
+  const { supabaseResponse, user, hasCookiesSet } = await updateSession(request);
+
+  // 6. Rewrite to target URL preserving updated request headers
+  const rewrittenResponse = NextResponse.rewrite(targetUrl, {
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  // Copy any Set-Cookie headers from supabaseResponse to the rewritten response
+  supabaseResponse.cookies.getAll().forEach((cookie) => {
+    rewrittenResponse.cookies.set(cookie.name, cookie.value, cookie);
+  });
+
+  // 7. Prevent public caching of authenticated responses or responses containing session Set-Cookie headers
+  if (user !== null || hasCookiesSet) {
+    rewrittenResponse.headers.set(
+      'Cache-Control',
+      'private, no-cache, no-store, max-age=0, must-revalidate'
+    );
+  }
+
+  return rewrittenResponse;
 }
 
 export const config = {
