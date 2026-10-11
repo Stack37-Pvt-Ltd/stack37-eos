@@ -4,6 +4,14 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+try {
+    if (typeof (process as unknown as { loadEnvFile?: (path?: string) => void }).loadEnvFile === 'function' && fs.existsSync('.env.local')) {
+        (process as unknown as { loadEnvFile: (path: string) => void }).loadEnvFile('.env.local');
+    }
+} catch {
+    // Ignore if not present or failing
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
