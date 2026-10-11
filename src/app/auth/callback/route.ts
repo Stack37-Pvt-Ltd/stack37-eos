@@ -10,11 +10,15 @@ import type { EmailOtpType } from '@supabase/supabase-js';
  * 1. Standard PKCE authorization code exchange (`code`)
  * 2. Token hash email verification (`token_hash` + `type`)
  * 
- * Password Recovery Security Invariant:
- * Recovery authorization is NEVER derived from user-controlled query parameters.
- * It is issued ONLY when Supabase Auth cryptographically confirms a verified recovery event
- * (either verifyOtp with type='recovery' or PKCE exchange with redirectType='recovery').
- * The issued cookie is tamper-resistant (HMAC signed), time-limited (15m), and bound to the user ID.
+ * Password Recovery Security Invariants:
+ * 1. Recovery authorization is NEVER derived from user-controlled query parameters.
+ * 2. PKCE code exchange (`exchangeCodeForSession`) returns `AuthTokenResponse` ({ user, session })
+ *    without `redirectType`, and is NEVER treated as proof of password recovery. Even if
+ *    query parameters include `type=recovery`, code exchanges are treated as ordinary login callbacks.
+ * 3. Recovery authorization is issued ONLY when Supabase Auth cryptographically confirms a verified
+ *    recovery challenge via `supabase.auth.verifyOtp({ token_hash, type: 'recovery' })`.
+ * 4. The issued recovery cookie is tamper-resistant (HMAC-SHA256 with dedicated server secret),
+ *    strictly bound to the verified user ID, and short-lived (15 minutes).
  * 
  * Open-Redirect Defense:
  * The `next` destination parameter is strictly sanitized via `sanitizeRedirectPath`.
@@ -48,27 +52,38 @@ export async function GET(request: NextRequest) {
     return response;
   };
 
-  // Scenario 1: PKCE Code Exchange
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error && data?.user) {
-      // GoTrue returns redirectType === 'recovery' for verified recovery PKCE exchanges
-      const isVerifiedRecovery = (data as { redirectType?: string }).redirectType === 'recovery';
-      return createAuthorizedResponse(safeNext, isVerifiedRecovery ? data.user.id : undefined);
-    }
-  }
-
-  // Scenario 2: Token Hash OTP Verification (Email Confirmation / Recovery)
+  // Scenario 1: Token Hash OTP Verification (Documented Supabase SSR Recovery & Email Confirmation)
   if (tokenHash && type) {
     const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
     });
+
     if (!error && data?.user) {
-      // Token hash cryptographically verified by Supabase server specifically for recovery
+      // Cryptographically verified by Supabase Auth server specifically for password recovery
       const isVerifiedRecovery = type === 'recovery';
       return createAuthorizedResponse(safeNext, isVerifiedRecovery ? data.user.id : undefined);
     }
+
+    // If OTP verification fails (invalid, expired, or forged token_hash), fail safely
+    return NextResponse.redirect(
+      new URL('/login?error=auth_callback_failed', requestUrl.origin)
+    );
+  }
+
+  // Scenario 2: Standard PKCE Authorization Code Exchange (OAuth / SSO / Magic Link)
+  // Security Note: AuthTokenResponse does not expose redirectType and is never used as proof of password recovery.
+  // Ordinary login callbacks establish user sessions but NEVER grant recovery authorization.
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data?.user) {
+      return createAuthorizedResponse(safeNext);
+    }
+
+    // Code exchange failed (expired, invalid, or replayed authorization code)
+    return NextResponse.redirect(
+      new URL('/login?error=auth_callback_failed', requestUrl.origin)
+    );
   }
 
   // If callback validation fails or no valid parameters were supplied,

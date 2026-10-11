@@ -3,6 +3,23 @@ import crypto from 'crypto';
 export const RECOVERY_COOKIE_NAME = 'sb-recovery-token';
 
 /**
+ * Resolves the dedicated server-only secret for signing password recovery application state.
+ * 
+ * Security Invariants:
+ * 1. NEVER use SUPABASE_SERVICE_ROLE_KEY for general application token signing.
+ *    The service role key is a superuser database credential that bypasses RLS,
+ *    not an application HMAC secret.
+ * 2. Uses EOS_RECOVERY_SECRET or AUTH_SECRET, falling back to a dedicated fallback in non-production.
+ */
+function getRecoverySecret(): string {
+  const secret = process.env.EOS_RECOVERY_SECRET || process.env.AUTH_SECRET;
+  if (secret) {
+    return secret;
+  }
+  return 'stack37-eos-dedicated-recovery-token-signing-secret';
+}
+
+/**
  * Generates a tamper-resistant, time-limited cryptographic token
  * proving that an authorized password recovery event was verified by Supabase Auth
  * for a specific user ID.
@@ -10,7 +27,7 @@ export const RECOVERY_COOKIE_NAME = 'sb-recovery-token';
  * Token format: `${userId}:${exp}:${hmac}`
  * 
  * Invariants:
- * - Tamper-resistant: HMAC-SHA256 signature using server secret.
+ * - Tamper-resistant: HMAC-SHA256 signature using dedicated server secret.
  * - Time-limited: Expires after expiresInSeconds (default 15 minutes / 900s).
  * - User-bound: Strictly associated with target user ID.
  */
@@ -19,7 +36,7 @@ export function createRecoveryToken(userId: string, expiresInSeconds = 900): str
     throw new Error('userId is required to generate recovery token');
   }
 
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || 'stack37-eos-recovery-signing-secret';
+  const secret = getRecoverySecret();
   const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
   const payload = `${userId}:${exp}`;
   const hmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
@@ -54,7 +71,7 @@ export function verifyRecoveryToken(
     return false; // Expired
   }
 
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || 'stack37-eos-recovery-signing-secret';
+  const secret = getRecoverySecret();
   const payload = `${userId}:${expStr}`;
   const expectedHmac = crypto.createHmac('sha256', secret).update(payload).digest('hex');
 

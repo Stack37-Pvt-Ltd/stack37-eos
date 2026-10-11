@@ -331,22 +331,22 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
     });
 
-    it('sets cryptographic sb-recovery-token cookie when PKCE exchange has redirectType="recovery"', async () => {
+    it('does not grant recovery authorization for ordinary PKCE login callbacks, even if type=recovery is passed in query (forgery defense)', async () => {
       mockExchangeCodeForSession.mockResolvedValue({
-        data: { user: { id: 'recovery-user-pkce' }, session: {}, redirectType: 'recovery' },
+        data: { user: { id: 'login-user-pkce' }, session: {} },
         error: null,
       });
 
+      // Attacker attempts to forge recovery authorization by passing type=recovery with a login code
       const req = new NextRequest(
-        'http://mybusiness.localhost:3000/auth/callback?code=mock-recovery-code&next=/reset-password'
+        'http://mybusiness.localhost:3000/auth/callback?code=mock-login-code&type=recovery&next=/reset-password'
       );
       const res = await authCallbackGET(req);
 
       expect(res.status).toBe(307);
       expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/reset-password');
-      const token = res.cookies.get(RECOVERY_COOKIE_NAME)?.value;
-      expect(token).toBeDefined();
-      expect(token).toContain('recovery-user-pkce:');
+      // Invariant: PKCE code exchange never issues recovery authorization
+      expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
     });
 
     it('sets cryptographic sb-recovery-token cookie when processing genuine verified recovery flow via verifyOtp', async () => {
@@ -393,7 +393,7 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/select-organization');
     });
 
-    it('redirects to /login with error indicator on verification failure', async () => {
+    it('redirects to /login with error indicator when PKCE code exchange fails (expired or invalid code)', async () => {
       mockExchangeCodeForSession.mockResolvedValue({ error: { message: 'Invalid or expired code' } });
 
       const req = new NextRequest(
@@ -405,6 +405,35 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(res.headers.get('location')).toBe(
         'http://mybusiness.localhost:3000/login?error=auth_callback_failed'
       );
+      expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
+    });
+
+    it('redirects to /login with error indicator when verifyOtp fails (invalid or expired recovery link)', async () => {
+      mockVerifyOtp.mockResolvedValue({ error: { message: 'Token has expired or is invalid' } });
+
+      const req = new NextRequest(
+        'http://mybusiness.localhost:3000/auth/callback?token_hash=invalid-hash&type=recovery'
+      );
+      const res = await authCallbackGET(req);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get('location')).toBe(
+        'http://mybusiness.localhost:3000/login?error=auth_callback_failed'
+      );
+      expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
+    });
+
+    it('redirects to /login when unverified query parameters are passed without token_hash or code (callback forgery defense)', async () => {
+      const req = new NextRequest(
+        'http://mybusiness.localhost:3000/auth/callback?type=recovery&next=/reset-password'
+      );
+      const res = await authCallbackGET(req);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get('location')).toBe(
+        'http://mybusiness.localhost:3000/login?error=auth_callback_failed'
+      );
+      expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
     });
   });
 

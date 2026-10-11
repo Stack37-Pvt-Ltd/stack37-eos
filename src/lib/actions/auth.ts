@@ -168,7 +168,10 @@ export async function forgotPasswordAction(
   const origin = await getTrustedOrigin();
   const supabase = await createClient();
 
-  // Send password recovery email directing to PKCE callback
+  // Dispatches password recovery email.
+  // The Supabase email template should link to:
+  // {{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password
+  // Upon clicking, the token_hash is cryptographically verified by GoTrue via verifyOtp in /auth/callback.
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=/reset-password`,
   });

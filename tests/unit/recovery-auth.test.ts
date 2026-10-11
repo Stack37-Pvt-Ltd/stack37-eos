@@ -61,4 +61,30 @@ describe('Cryptographic Password Recovery Token System', () => {
     const isValid = verifyRecoveryToken(expiredToken, userId);
     expect(isValid).toBe(false);
   });
+
+  it('uses a dedicated server-only secret and functions independently of SUPABASE_SERVICE_ROLE_KEY', () => {
+    const originalServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const originalRecoverySecret = process.env.EOS_RECOVERY_SECRET;
+
+    try {
+      // Unset service role key completely
+      delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      process.env.EOS_RECOVERY_SECRET = 'custom-dedicated-recovery-secret-123';
+
+      const userId = 'user-uuid-isolated';
+      const token = createRecoveryToken(userId, 900);
+      expect(verifyRecoveryToken(token, userId)).toBe(true);
+
+      // Mutate recovery secret: verification must fail (proving dependency on dedicated secret, not service role key)
+      process.env.EOS_RECOVERY_SECRET = 'different-signing-secret-456';
+      expect(verifyRecoveryToken(token, userId)).toBe(false);
+    } finally {
+      process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceRoleKey;
+      if (originalRecoverySecret !== undefined) {
+        process.env.EOS_RECOVERY_SECRET = originalRecoverySecret;
+      } else {
+        delete process.env.EOS_RECOVERY_SECRET;
+      }
+    }
+  });
 });
