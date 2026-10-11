@@ -87,4 +87,40 @@ describe('Cryptographic Password Recovery Token System', () => {
       }
     }
   });
+
+  it('fails securely in production when EOS_RECOVERY_SECRET is missing or insufficiently strong (<32 chars)', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalRecoverySecret = process.env.EOS_RECOVERY_SECRET;
+    const originalAuthSecret = process.env.AUTH_SECRET;
+
+    try {
+      (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+      delete process.env.EOS_RECOVERY_SECRET;
+      delete process.env.AUTH_SECRET;
+
+      // 1. Missing secret in production must throw
+      expect(() => createRecoveryToken('user-123', 900)).toThrow(/Missing EOS_RECOVERY_SECRET in production/);
+
+      // 2. Weak secret (<32 chars) in production must throw
+      process.env.EOS_RECOVERY_SECRET = 'short-secret';
+      expect(() => createRecoveryToken('user-123', 900)).toThrow(/at least 32 characters long/);
+
+      // 3. Strong secret (>=32 chars) in production must succeed
+      process.env.EOS_RECOVERY_SECRET = 'this-is-a-very-strong-production-recovery-secret-32ch';
+      const token = createRecoveryToken('user-123', 900);
+      expect(verifyRecoveryToken(token, 'user-123')).toBe(true);
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV = originalNodeEnv;
+      if (originalRecoverySecret !== undefined) {
+        process.env.EOS_RECOVERY_SECRET = originalRecoverySecret;
+      } else {
+        delete process.env.EOS_RECOVERY_SECRET;
+      }
+      if (originalAuthSecret !== undefined) {
+        process.env.AUTH_SECRET = originalAuthSecret;
+      } else {
+        delete process.env.AUTH_SECRET;
+      }
+    }
+  });
 });

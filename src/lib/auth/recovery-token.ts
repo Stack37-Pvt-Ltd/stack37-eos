@@ -14,8 +14,21 @@ export const RECOVERY_COOKIE_NAME = 'sb-recovery-token';
 function getRecoverySecret(): string {
   const secret = process.env.EOS_RECOVERY_SECRET || process.env.AUTH_SECRET;
   if (secret) {
+    if (process.env.NODE_ENV === 'production' && secret.length < 32) {
+      throw new Error(
+        'EOS_RECOVERY_SECRET must be at least 32 characters long for cryptographic security.'
+      );
+    }
     return secret;
   }
+
+  // Fail securely in production: never allow fallback secret
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Missing EOS_RECOVERY_SECRET in production. A dedicated server-only secret of at least 32 characters is required.'
+    );
+  }
+
   return 'stack37-eos-dedicated-recovery-token-signing-secret';
 }
 
