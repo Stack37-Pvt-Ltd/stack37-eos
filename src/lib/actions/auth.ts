@@ -12,6 +12,7 @@ import {
   ResetPasswordInput,
 } from '../validations/auth';
 import { headers, cookies } from 'next/headers';
+import { verifyRecoveryToken, RECOVERY_COOKIE_NAME } from '../auth/recovery-token';
 
 export interface AuthActionResult<T = unknown> {
   success: boolean;
@@ -205,7 +206,7 @@ export async function resetPasswordAction(
 
   const { password } = validation.data;
   const cookieStore = await cookies();
-  const hasRecoveryAuth = cookieStore.get('sb-recovery-mode')?.value === 'true';
+  const rawRecoveryToken = cookieStore.get(RECOVERY_COOKIE_NAME)?.value;
 
   const supabase = await createClient();
 
@@ -219,8 +220,10 @@ export async function resetPasswordAction(
     };
   }
 
-  // Security Invariant: An authenticated session alone does not prove password recovery
-  if (!hasRecoveryAuth) {
+  // Security Invariant: An authenticated session alone does not prove password recovery.
+  // Validate that a genuine, tamper-resistant, time-limited recovery token was issued for this user.
+  const isRecoveryAuthorized = verifyRecoveryToken(rawRecoveryToken, user.id);
+  if (!isRecoveryAuthorized) {
     return {
       success: false,
       error: 'Unauthorized: Password reset requires a verified recovery session from your email link.',
@@ -239,7 +242,7 @@ export async function resetPasswordAction(
   }
 
   // Clear recovery mode authorization upon successful password reset
-  cookieStore.delete('sb-recovery-mode');
+  cookieStore.delete(RECOVERY_COOKIE_NAME);
 
   return {
     success: true,

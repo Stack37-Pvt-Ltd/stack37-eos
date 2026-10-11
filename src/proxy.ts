@@ -69,6 +69,7 @@ export default async function proxy(request: NextRequest) {
     '/forgot-password',
     '/reset-password',
     '/verify-email',
+    '/select-organization',
     '/auth',
   ];
 

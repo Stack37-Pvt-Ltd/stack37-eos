@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '../../../lib/supabase/server';
 import { sanitizeRedirectPath } from '../../../lib/validations/auth';
+import { createRecoveryToken, RECOVERY_COOKIE_NAME } from '../../../lib/auth/recovery-token';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
 /**
@@ -9,9 +10,14 @@ import type { EmailOtpType } from '@supabase/supabase-js';
  * 1. Standard PKCE authorization code exchange (`code`)
  * 2. Token hash email verification (`token_hash` + `type`)
  * 
+ * Password Recovery Security Invariant:
+ * Recovery authorization is NEVER derived from user-controlled query parameters.
+ * It is issued ONLY when Supabase Auth cryptographically confirms a verified recovery event
+ * (either verifyOtp with type='recovery' or PKCE exchange with redirectType='recovery').
+ * The issued cookie is tamper-resistant (HMAC signed), time-limited (15m), and bound to the user ID.
+ * 
  * Open-Redirect Defense:
  * The `next` destination parameter is strictly sanitized via `sanitizeRedirectPath`.
- * Unsafe external or protocol-relative targets are automatically discarded.
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -26,11 +32,12 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient();
 
   // Helper to construct authorized redirect response
-  const createAuthorizedResponse = (destination: string, isRecovery: boolean) => {
+  const createAuthorizedResponse = (destination: string, recoveryUserId?: string) => {
     const response = NextResponse.redirect(new URL(destination, requestUrl.origin));
-    if (isRecovery) {
-      // Issue short-lived recovery authorization (15 minutes) for password-reset verification
-      response.cookies.set('sb-recovery-mode', 'true', {
+    if (recoveryUserId) {
+      // Issue cryptographically signed, user-bound, time-limited recovery authorization
+      const token = createRecoveryToken(recoveryUserId, 900);
+      response.cookies.set(RECOVERY_COOKIE_NAME, token, {
         path: '/',
         maxAge: 900,
         httpOnly: true,
@@ -41,24 +48,26 @@ export async function GET(request: NextRequest) {
     return response;
   };
 
-  const isRecoveryFlow = type === 'recovery' || safeNext.includes('/reset-password');
-
   // Scenario 1: PKCE Code Exchange
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return createAuthorizedResponse(safeNext, isRecoveryFlow);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data?.user) {
+      // GoTrue returns redirectType === 'recovery' for verified recovery PKCE exchanges
+      const isVerifiedRecovery = (data as { redirectType?: string }).redirectType === 'recovery';
+      return createAuthorizedResponse(safeNext, isVerifiedRecovery ? data.user.id : undefined);
     }
   }
 
   // Scenario 2: Token Hash OTP Verification (Email Confirmation / Recovery)
   if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash: tokenHash,
     });
-    if (!error) {
-      return createAuthorizedResponse(safeNext, isRecoveryFlow);
+    if (!error && data?.user) {
+      // Token hash cryptographically verified by Supabase server specifically for recovery
+      const isVerifiedRecovery = type === 'recovery';
+      return createAuthorizedResponse(safeNext, isVerifiedRecovery ? data.user.id : undefined);
     }
   }
 

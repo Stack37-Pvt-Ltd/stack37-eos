@@ -9,6 +9,7 @@ import {
 } from '../../src/lib/actions/auth';
 import { GET as authCallbackGET } from '../../src/app/auth/callback/route';
 import { GET as logoutGET, POST as logoutPOST } from '../../src/app/auth/logout/route';
+import { createRecoveryToken, RECOVERY_COOKIE_NAME } from '../../src/lib/auth/recovery-token';
 
 // Mock cookies
 const mockCookieMap = new Map<string, string>();
@@ -194,7 +195,7 @@ describe('Authentication Server Actions & Route Handlers', () => {
     it('rejects password update if user has an ordinary authenticated session but lacks recovery authorization', async () => {
       // User is logged in normally
       mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
-      // But mockCookieMap has NO 'sb-recovery-mode' cookie
+      // But mockCookieMap has NO recovery cookie
 
       const result = await resetPasswordAction({
         password: 'NewStrongPassword123!',
@@ -206,12 +207,76 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(mockUpdateUser).not.toHaveBeenCalled();
     });
 
-    it('updates password when user possesses verified recovery authorization', async () => {
+    it('rejects password update if cookie contains a plain boolean "true" string instead of a cryptographic token', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+      // Attacker set document.cookie = "sb-recovery-token=true"
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, 'true');
+
+      const result = await resetPasswordAction({
+        password: 'NewStrongPassword123!',
+        confirmPassword: 'NewStrongPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unauthorized: Password reset requires a verified recovery session');
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects password update if recovery token is bound to a different user', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-victim-123' } }, error: null });
+      // Token generated for attacker user
+      const attackerToken = createRecoveryToken('user-attacker-456', 900);
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, attackerToken);
+
+      const result = await resetPasswordAction({
+        password: 'NewStrongPassword123!',
+        confirmPassword: 'NewStrongPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unauthorized: Password reset requires a verified recovery session');
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects password update if recovery token signature is tampered', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+      const validToken = createRecoveryToken('user-123', 900);
+      const [uid, exp] = validToken.split(':');
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, `${uid}:${exp}:tampered-hmac-signature`);
+
+      const result = await resetPasswordAction({
+        password: 'NewStrongPassword123!',
+        confirmPassword: 'NewStrongPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unauthorized: Password reset requires a verified recovery session');
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('rejects password update if recovery token has expired', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+      // Token expired 60s ago
+      const expiredToken = createRecoveryToken('user-123', -60);
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, expiredToken);
+
+      const result = await resetPasswordAction({
+        password: 'NewStrongPassword123!',
+        confirmPassword: 'NewStrongPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unauthorized: Password reset requires a verified recovery session');
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('updates password when user possesses verified, user-bound recovery authorization token', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
       mockUpdateUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
 
-      // Simulate verified recovery session cookie set by /auth/callback
-      mockCookieMap.set('sb-recovery-mode', 'true');
+      // Valid cryptographic token issued for user-123
+      const validToken = createRecoveryToken('user-123', 900);
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, validToken);
 
       const result = await resetPasswordAction({
         password: 'NewStrongPassword123!',
@@ -222,8 +287,8 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(result.data?.message).toContain('Password successfully updated');
       expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'NewStrongPassword123!' });
 
-      // Verifies recovery mode authorization was consumed and cleared
-      expect(mockCookieMap.has('sb-recovery-mode')).toBe(false);
+      // Verifies recovery token cookie was consumed and cleared
+      expect(mockCookieMap.has(RECOVERY_COOKIE_NAME)).toBe(false);
     });
   });
 
@@ -249,7 +314,10 @@ describe('Authentication Server Actions & Route Handlers', () => {
 
   describe('Auth Callback Route Handler (/auth/callback)', () => {
     it('processes PKCE code and redirects to sanitized safe destination', async () => {
-      mockExchangeCodeForSession.mockResolvedValue({ error: null });
+      mockExchangeCodeForSession.mockResolvedValue({
+        data: { user: { id: 'pkce-user-123' }, session: {} },
+        error: null,
+      });
 
       const req = new NextRequest(
         'http://mybusiness.localhost:3000/auth/callback?code=mock-pkce-code&next=/dashboard'
@@ -259,10 +327,30 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(res.status).toBe(307);
       expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/dashboard');
       expect(mockExchangeCodeForSession).toHaveBeenCalledWith('mock-pkce-code');
+      // Regular code exchange does NOT set recovery token
+      expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
     });
 
-    it('sets sb-recovery-mode cookie when processing recovery flow', async () => {
-      mockVerifyOtp.mockResolvedValue({ error: null });
+    it('sets cryptographic sb-recovery-token cookie when PKCE exchange has redirectType="recovery"', async () => {
+      mockExchangeCodeForSession.mockResolvedValue({
+        data: { user: { id: 'recovery-user-pkce' }, session: {}, redirectType: 'recovery' },
+        error: null,
+      });
+
+      const req = new NextRequest(
+        'http://mybusiness.localhost:3000/auth/callback?code=mock-recovery-code&next=/reset-password'
+      );
+      const res = await authCallbackGET(req);
+
+      expect(res.status).toBe(307);
+      expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/reset-password');
+      const token = res.cookies.get(RECOVERY_COOKIE_NAME)?.value;
+      expect(token).toBeDefined();
+      expect(token).toContain('recovery-user-pkce:');
+    });
+
+    it('sets cryptographic sb-recovery-token cookie when processing genuine verified recovery flow via verifyOtp', async () => {
+      mockVerifyOtp.mockResolvedValue({ data: { user: { id: 'recovery-user-999' } }, error: null });
 
       const req = new NextRequest(
         'http://mybusiness.localhost:3000/auth/callback?token_hash=mock-hash&type=recovery&next=/reset-password'
@@ -271,12 +359,29 @@ describe('Authentication Server Actions & Route Handlers', () => {
 
       expect(res.status).toBe(307);
       expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/reset-password');
-      // Verify recovery authorization cookie was set on redirect response
-      expect(res.cookies.get('sb-recovery-mode')?.value).toBe('true');
+      // Verify user-bound recovery authorization cookie was set on redirect response
+      const token = res.cookies.get(RECOVERY_COOKIE_NAME)?.value;
+      expect(token).toBeDefined();
+      expect(token).toContain('recovery-user-999:');
+    });
+
+    it('does not set recovery cookie for non-recovery verification (e.g. signup confirmation)', async () => {
+      mockVerifyOtp.mockResolvedValue({ data: { user: { id: 'signup-user-123' } }, error: null });
+
+      const req = new NextRequest(
+        'http://mybusiness.localhost:3000/auth/callback?token_hash=mock-hash&type=signup&next=/select-organization'
+      );
+      const res = await authCallbackGET(req);
+
+      expect(res.status).toBe(307);
+      expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
     });
 
     it('neutralizes malicious external redirect targets', async () => {
-      mockExchangeCodeForSession.mockResolvedValue({ error: null });
+      mockExchangeCodeForSession.mockResolvedValue({
+        data: { user: { id: 'pkce-user-123' }, session: {} },
+        error: null,
+      });
 
       const req = new NextRequest(
         'http://mybusiness.localhost:3000/auth/callback?code=mock-pkce-code&next=https://attacker.com'
