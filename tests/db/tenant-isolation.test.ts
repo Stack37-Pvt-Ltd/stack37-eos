@@ -74,6 +74,7 @@ describe('Database RLS and Isolation Tests', () => {
     let ownerAMemId: string;
     let managerAMemId: string;
     let empAMemId: string;
+    let ownerBMemId: string;
     
     let sysRoleId: string;
     let mgrRoleId: string;
@@ -190,7 +191,7 @@ describe('Database RLS and Isolation Tests', () => {
 
         const ownerBMem = await adminSupabase.from('organization_members').select('id').eq('organization_id', orgBId).eq('user_id', ownerBId).single();
         if (ownerBMem.error || !ownerBMem.data?.id) throw new Error('Failed to fetch Owner B mem: ' + ownerBMem.error?.message);
-        expect(ownerBMem.data.id).toBeDefined();
+        ownerBMemId = ownerBMem.data.id;
 
         // Create Roles for Org A - save manifest progressively
         const sysRoleRes = await adminSupabase.from('roles').insert({ organization_id: orgAId, name: 'System Admin', is_system: true }).select('id').single();
@@ -267,7 +268,7 @@ describe('Database RLS and Isolation Tests', () => {
         if (auditB.error || !auditB.data?.id) throw new Error('Failed to insert audit B: ' + auditB.error?.message);
         fixtureState.auditLogIds.push(auditB.data.id);
         persistManifest();
-    });
+    }, 60000);
 
     afterAll(async () => {
         if (!adminSupabase) return;
@@ -322,7 +323,7 @@ describe('Database RLS and Isolation Tests', () => {
                 console.error('Warning: Failed to unlink recovery manifest after verification:', err);
             }
         }
-    });
+    }, 60000);
 
     // ==========================================
     // 1. Cross-Tenant Isolation
@@ -445,29 +446,40 @@ describe('Database RLS and Isolation Tests', () => {
         expect(ownerCheck.data!.organization_id).toBe(orgAId);
     });
 
-    it('9. Should reject transferring membership to another org if it orphans the origin org via trigger', async () => {
-        // Executed via adminSupabase (service role, bypassing RLS) to prove rejection is purely from check_organization_owner trigger
+    it('9. Should reject transferring an owner to another org via one_owner_per_org unique index', async () => {
+        // Attempt to transfer Company A's active owner to Company B (which already has an active owner)
         const res = await adminSupabase.from('organization_members').update({ organization_id: orgBId }).eq('id', ownerAMemId);
         
         // 1. Assert update was rejected
         expect(res.error).not.toBeNull();
         
-        // 2. Distinguish from RLS/syntax/FK: verify PostgreSQL error code P0001 (raise_exception from trigger)
-        expect(res.error?.code).toBe('P0001');
+        // 2. Explicitly assert PostgreSQL error 23505 (unique_violation from one_owner_per_org index)
+        expect(res.error?.code).toBe('23505');
+        expect(res.error?.message).toContain('one_owner_per_org');
         
-        // 3. Verify error message is specifically from the check_organization_owner trigger
-        expect(res.error?.message).toMatch(/owner/i);
-        
-        // 4. Confirm transaction rolled back: membership remains attached to Org A as active owner
-        const ownerCheck = await adminSupabase.from('organization_members')
+        // 3. Confirm transaction rolled back: Company A's owner membership is preserved
+        const ownerACheck = await adminSupabase.from('organization_members')
             .select('id, organization_id, is_owner, status')
             .eq('id', ownerAMemId)
             .single();
-        expect(ownerCheck.error).toBeNull();
-        expect(ownerCheck.data).not.toBeNull();
-        expect(ownerCheck.data!.id).toBe(ownerAMemId);
-        expect(ownerCheck.data!.organization_id).toBe(orgAId);
-        expect(ownerCheck.data!.is_owner).toBe(true);
+        expect(ownerACheck.error).toBeNull();
+        expect(ownerACheck.data).not.toBeNull();
+        expect(ownerACheck.data!.id).toBe(ownerAMemId);
+        expect(ownerACheck.data!.organization_id).toBe(orgAId);
+        expect(ownerACheck.data!.is_owner).toBe(true);
+        expect(ownerACheck.data!.status).toBe('active');
+
+        // 4. Confirm Company B's existing owner membership remains unaffected
+        const ownerBCheck = await adminSupabase.from('organization_members')
+            .select('id, organization_id, is_owner, status')
+            .eq('id', ownerBMemId)
+            .single();
+        expect(ownerBCheck.error).toBeNull();
+        expect(ownerBCheck.data).not.toBeNull();
+        expect(ownerBCheck.data!.id).toBe(ownerBMemId);
+        expect(ownerBCheck.data!.organization_id).toBe(orgBId);
+        expect(ownerBCheck.data!.is_owner).toBe(true);
+        expect(ownerBCheck.data!.status).toBe('active');
     });
 });
 

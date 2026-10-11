@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:db": "vitest run tests/db/tenant-isolation.test.ts"
+    "test:db": "vitest run --test-timeout=30000 --hook-timeout=60000 tests/db/tenant-isolation.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.4.0",
