@@ -53,39 +53,63 @@ export default async function proxy(request: NextRequest) {
   // Client-supplied tenant identity headers are never authoritative.
   request.headers.delete('x-tenant-slug');
 
-  // Determine target path
-  let targetUrl: URL | null = null;
-  if (subdomain === 'mybusiness') {
+  // 4. Default / no subdomain -> return 404 for this app
+  const isValidSubdomain =
+    subdomain && subdomain !== baseDomain && !RESERVED_SUBDOMAINS.has(subdomain) ||
+    subdomain === 'mybusiness';
+
+  if (!isValidSubdomain) {
+    return new NextResponse('Not Found (STACK37 EOS requires a valid subdomain)', { status: 404 });
+  }
+
+  // 5. Determine target path (Shared auth routes vs subdomain rewrites)
+  const SHARED_AUTH_PREFIXES = [
+    '/login',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+    '/auth',
+  ];
+
+  const isSharedAuthRoute = SHARED_AUTH_PREFIXES.some(
+    (prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)
+  );
+
+  let targetUrl: URL;
+  if (isSharedAuthRoute) {
+    // Shared authentication routes map directly to top-level handlers
+    targetUrl = url;
+  } else if (subdomain === 'mybusiness') {
     // mybusiness subdomain -> registration route
     url.pathname = `/registration${url.pathname === '/' ? '' : url.pathname}`;
     targetUrl = url;
-  } else if (subdomain && subdomain !== baseDomain) {
+  } else {
     // Tenant subdomain -> tenant route
     url.pathname = `/tenant/${subdomain}${url.pathname === '/' ? '' : url.pathname}`;
     targetUrl = url;
   }
 
-  // 4. Default / no subdomain -> return 404 for this app
-  if (!targetUrl) {
-    return new NextResponse('Not Found (STACK37 EOS requires a valid subdomain)', { status: 404 });
-  }
-
-  // 5. Synchronize Supabase session and refresh tokens
+  // 6. Synchronize Supabase session and refresh tokens
   const { supabaseResponse, user, hasCookiesSet } = await updateSession(request);
 
-  // 6. Rewrite to target URL preserving updated request headers
+  // Synchronize request.headers 'cookie' so downstream Server Components see refreshed tokens
+  if (hasCookiesSet) {
+    request.headers.set('cookie', request.cookies.toString());
+  }
+
+  // 7. Rewrite to target URL preserving updated request headers
   const rewrittenResponse = NextResponse.rewrite(targetUrl, {
     request: {
       headers: request.headers,
     },
   });
 
-  // Copy any Set-Cookie headers from supabaseResponse to the rewritten response
+  // Copy any Set-Cookie headers from supabaseResponse to the rewritten response (for the browser)
   supabaseResponse.cookies.getAll().forEach((cookie) => {
     rewrittenResponse.cookies.set(cookie.name, cookie.value, cookie);
   });
 
-  // 7. Prevent public caching of authenticated responses or responses containing session Set-Cookie headers
+  // 8. Prevent public caching of authenticated responses or responses containing session Set-Cookie headers
   if (user !== null || hasCookiesSet) {
     rewrittenResponse.headers.set(
       'Cache-Control',
