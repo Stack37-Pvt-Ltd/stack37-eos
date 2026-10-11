@@ -30,8 +30,8 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/acmecorp/dashboard');
   });
 
-  it('routes shared auth paths (/login, /auth/callback, /forgot-password, /reset-password) on mybusiness', async () => {
-    const authPaths = ['/login', '/auth/callback', '/forgot-password', '/reset-password'];
+  it('routes shared auth paths (/login, /register, /auth/callback, /forgot-password, /reset-password, /verify-email) on mybusiness', async () => {
+    const authPaths = ['/login', '/register', '/auth/callback', '/forgot-password', '/reset-password', '/verify-email'];
     for (const p of authPaths) {
       const req = new NextRequest(`http://mybusiness.localhost:3000${p}`, {
         headers: { host: 'mybusiness.localhost:3000' },

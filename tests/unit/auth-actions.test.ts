@@ -10,6 +10,19 @@ import {
 import { GET as authCallbackGET } from '../../src/app/auth/callback/route';
 import { GET as logoutGET, POST as logoutPOST } from '../../src/app/auth/logout/route';
 
+// Mock cookies
+const mockCookieMap = new Map<string, string>();
+const mockCookieStore = {
+  get: (name: string) => (mockCookieMap.has(name) ? { name, value: mockCookieMap.get(name)! } : undefined),
+  set: (name: string, value: string) => {
+    mockCookieMap.set(name, value);
+  },
+  delete: (name: string) => {
+    mockCookieMap.delete(name);
+  },
+  getAll: () => Array.from(mockCookieMap.entries()).map(([name, value]) => ({ name, value })),
+};
+
 // Mock next/headers
 vi.mock('next/headers', () => ({
   headers: vi.fn().mockResolvedValue({
@@ -19,10 +32,7 @@ vi.mock('next/headers', () => ({
       return null;
     },
   }),
-  cookies: vi.fn().mockResolvedValue({
-    getAll: () => [],
-    set: vi.fn(),
-  }),
+  cookies: vi.fn().mockImplementation(() => Promise.resolve(mockCookieStore)),
 }));
 
 // Mock Supabase server client
@@ -53,6 +63,7 @@ vi.mock('../../src/lib/supabase/server', () => ({
 describe('Authentication Server Actions & Route Handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCookieMap.clear();
   });
 
   describe('loginAction', () => {
@@ -131,7 +142,7 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(result.data?.userId).toBe('user-uuid-789');
     });
 
-    it('handles duplicate account gracefully with sanitized message', async () => {
+    it('prevents account enumeration: returns uniform error message when account already exists', async () => {
       mockSignUp.mockResolvedValue({
         data: { user: null, session: null },
         error: { message: 'User already registered', status: 400 },
@@ -145,7 +156,8 @@ describe('Authentication Server Actions & Route Handlers', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('An account with this email address already exists.');
+      // Asserts that the response does NOT state "account already exists"
+      expect(result.error).toBe('Registration could not be completed. Please check your details or try signing in.');
     });
   });
 
@@ -166,8 +178,8 @@ describe('Authentication Server Actions & Route Handlers', () => {
     });
   });
 
-  describe('resetPasswordAction', () => {
-    it('rejects password update if no active session is present', async () => {
+  describe('resetPasswordAction (Authorization Invariant Verification)', () => {
+    it('rejects password update if no active user session is present', async () => {
       mockGetUser.mockResolvedValue({ data: { user: null }, error: { message: 'Auth session missing' } });
 
       const result = await resetPasswordAction({
@@ -179,9 +191,27 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(result.error).toContain('session is invalid or has expired');
     });
 
-    it('updates password when verified user session exists', async () => {
+    it('rejects password update if user has an ordinary authenticated session but lacks recovery authorization', async () => {
+      // User is logged in normally
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+      // But mockCookieMap has NO 'sb-recovery-mode' cookie
+
+      const result = await resetPasswordAction({
+        password: 'NewStrongPassword123!',
+        confirmPassword: 'NewStrongPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Unauthorized: Password reset requires a verified recovery session');
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('updates password when user possesses verified recovery authorization', async () => {
       mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
       mockUpdateUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+
+      // Simulate verified recovery session cookie set by /auth/callback
+      mockCookieMap.set('sb-recovery-mode', 'true');
 
       const result = await resetPasswordAction({
         password: 'NewStrongPassword123!',
@@ -190,6 +220,10 @@ describe('Authentication Server Actions & Route Handlers', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.message).toContain('Password successfully updated');
+      expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'NewStrongPassword123!' });
+
+      // Verifies recovery mode authorization was consumed and cleared
+      expect(mockCookieMap.has('sb-recovery-mode')).toBe(false);
     });
   });
 
@@ -227,20 +261,18 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(mockExchangeCodeForSession).toHaveBeenCalledWith('mock-pkce-code');
     });
 
-    it('processes OTP token_hash and type parameters', async () => {
+    it('sets sb-recovery-mode cookie when processing recovery flow', async () => {
       mockVerifyOtp.mockResolvedValue({ error: null });
 
       const req = new NextRequest(
-        'http://mybusiness.localhost:3000/auth/callback?token_hash=mock-hash&type=signup&next=/onboarding'
+        'http://mybusiness.localhost:3000/auth/callback?token_hash=mock-hash&type=recovery&next=/reset-password'
       );
       const res = await authCallbackGET(req);
 
       expect(res.status).toBe(307);
-      expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/onboarding');
-      expect(mockVerifyOtp).toHaveBeenCalledWith({
-        type: 'signup',
-        token_hash: 'mock-hash',
-      });
+      expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/reset-password');
+      // Verify recovery authorization cookie was set on redirect response
+      expect(res.cookies.get('sb-recovery-mode')?.value).toBe('true');
     });
 
     it('neutralizes malicious external redirect targets', async () => {
@@ -271,18 +303,38 @@ describe('Authentication Server Actions & Route Handlers', () => {
     });
   });
 
-  describe('Logout Route Handler (/auth/logout)', () => {
+  describe('Logout Route Handler (/auth/logout) Cross-Origin Defense', () => {
     it('rejects GET requests with 405 Method Not Allowed (CSRF prevention)', async () => {
       const res = await logoutGET();
       expect(res.status).toBe(405);
       expect(res.headers.get('Allow')).toBe('POST');
     });
 
-    it('accepts POST requests and executes default local logout', async () => {
+    it('rejects cross-origin POST requests with 403 Forbidden', async () => {
+      const req = new NextRequest('http://mybusiness.localhost:3000/auth/logout', {
+        method: 'POST',
+        headers: {
+          host: 'mybusiness.localhost:3000',
+          origin: 'http://malicious-site.com',
+        },
+      });
+      const res = await logoutPOST(req);
+
+      expect(res.status).toBe(403);
+      const body = await res.json();
+      expect(body.error).toContain('Forbidden: Cross-origin logout request rejected.');
+      expect(mockSignOut).not.toHaveBeenCalled();
+    });
+
+    it('accepts same-origin POST requests and executes local logout', async () => {
       mockSignOut.mockResolvedValue({ error: null });
 
       const req = new NextRequest('http://mybusiness.localhost:3000/auth/logout', {
         method: 'POST',
+        headers: {
+          host: 'mybusiness.localhost:3000',
+          origin: 'http://mybusiness.localhost:3000',
+        },
       });
       const res = await logoutPOST(req);
 
@@ -293,11 +345,15 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
     });
 
-    it('accepts POST requests with global logout scope', async () => {
+    it('accepts same-origin POST requests with global logout scope', async () => {
       mockSignOut.mockResolvedValue({ error: null });
 
       const req = new NextRequest('http://mybusiness.localhost:3000/auth/logout', {
         method: 'POST',
+        headers: {
+          host: 'mybusiness.localhost:3000',
+          origin: 'http://mybusiness.localhost:3000',
+        },
         body: JSON.stringify({ scope: 'global' }),
       });
       const res = await logoutPOST(req);

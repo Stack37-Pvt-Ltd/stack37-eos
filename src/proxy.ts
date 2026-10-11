@@ -65,6 +65,7 @@ export default async function proxy(request: NextRequest) {
   // 5. Determine target path (Shared auth routes vs subdomain rewrites)
   const SHARED_AUTH_PREFIXES = [
     '/login',
+    '/register',
     '/forgot-password',
     '/reset-password',
     '/verify-email',

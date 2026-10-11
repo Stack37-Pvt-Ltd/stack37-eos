@@ -22,6 +22,48 @@ export async function GET() {
  * - 'global': Revokes refresh token family globally on Supabase Auth server.
  */
 export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  const host = request.headers.get('host');
+
+  // Strict Cross-Origin CSRF Defense:
+  // Validate that Origin (or Referer) matches the server's expected host
+  if (origin) {
+    try {
+      const originHost = new URL(origin).host.split(':')[0];
+      const expectedHost = host?.split(':')[0];
+      if (originHost !== expectedHost) {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden: Cross-origin logout request rejected.' },
+          { status: 403 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden: Malformed origin header.' },
+        { status: 403 }
+      );
+    }
+  } else {
+    const referer = request.headers.get('referer');
+    if (referer) {
+      try {
+        const refererHost = new URL(referer).host.split(':')[0];
+        const expectedHost = host?.split(':')[0];
+        if (refererHost !== expectedHost) {
+          return NextResponse.json(
+            { success: false, error: 'Forbidden: Cross-origin logout request rejected.' },
+            { status: 403 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { success: false, error: 'Forbidden: Malformed referer header.' },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   let scope: 'local' | 'global' = 'local';
 
   try {

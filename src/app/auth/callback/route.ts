@@ -25,11 +25,29 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
 
+  // Helper to construct authorized redirect response
+  const createAuthorizedResponse = (destination: string, isRecovery: boolean) => {
+    const response = NextResponse.redirect(new URL(destination, requestUrl.origin));
+    if (isRecovery) {
+      // Issue short-lived recovery authorization (15 minutes) for password-reset verification
+      response.cookies.set('sb-recovery-mode', 'true', {
+        path: '/',
+        maxAge: 900,
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      });
+    }
+    return response;
+  };
+
+  const isRecoveryFlow = type === 'recovery' || safeNext.includes('/reset-password');
+
   // Scenario 1: PKCE Code Exchange
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(new URL(safeNext, requestUrl.origin));
+      return createAuthorizedResponse(safeNext, isRecoveryFlow);
     }
   }
 
@@ -40,7 +58,7 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
     });
     if (!error) {
-      return NextResponse.redirect(new URL(safeNext, requestUrl.origin));
+      return createAuthorizedResponse(safeNext, isRecoveryFlow);
     }
   }
 

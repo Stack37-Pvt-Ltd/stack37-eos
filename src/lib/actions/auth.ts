@@ -11,7 +11,7 @@ import {
   ForgotPasswordInput,
   ResetPasswordInput,
 } from '../validations/auth';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 
 export interface AuthActionResult<T = unknown> {
   success: boolean;
@@ -80,6 +80,7 @@ export async function loginAction(
 /**
  * Registers a new user identity in Supabase Auth.
  * Handles both immediate session issuance and email confirmation flows cleanly.
+ * Anti-Enumeration Defense: Does not reveal whether an account already exists.
  */
 export async function signupAction(
   rawInput: SignupInput
@@ -114,13 +115,12 @@ export async function signupAction(
   });
 
   if (error) {
-    // Return sanitized message, catching duplicate emails or rate limits without leaking system internals
+    // Anti-Enumeration Defense:
+    // Do not reveal whether an account already exists for this email address.
     const sanitizedError =
       error.status === 429
         ? 'Too many signup attempts. Please try again later.'
-        : error.message.toLowerCase().includes('already registered')
-        ? 'An account with this email address already exists.'
-        : 'Registration failed. Please check your details and try again.';
+        : 'Registration could not be completed. Please check your details or try signing in.';
 
     return {
       success: false,
@@ -183,6 +183,8 @@ export async function forgotPasswordAction(
 
 /**
  * Updates the user's password during an active recovery session.
+ * Enforces explicit recovery authorization (sb-recovery-mode cookie issued by callback).
+ * An ordinary authenticated session alone cannot execute password reset.
  */
 export async function resetPasswordAction(
   rawInput: ResetPasswordInput
@@ -202,6 +204,9 @@ export async function resetPasswordAction(
   }
 
   const { password } = validation.data;
+  const cookieStore = await cookies();
+  const hasRecoveryAuth = cookieStore.get('sb-recovery-mode')?.value === 'true';
+
   const supabase = await createClient();
 
   // Verify server-side that a cryptographically verified user session exists
@@ -211,6 +216,14 @@ export async function resetPasswordAction(
     return {
       success: false,
       error: 'Password reset session is invalid or has expired. Please request a new link.',
+    };
+  }
+
+  // Security Invariant: An authenticated session alone does not prove password recovery
+  if (!hasRecoveryAuth) {
+    return {
+      success: false,
+      error: 'Unauthorized: Password reset requires a verified recovery session from your email link.',
     };
   }
 
@@ -224,6 +237,9 @@ export async function resetPasswordAction(
       error: 'Failed to update password. Please ensure it meets complexity requirements and try again.',
     };
   }
+
+  // Clear recovery mode authorization upon successful password reset
+  cookieStore.delete('sb-recovery-mode');
 
   return {
     success: true,
