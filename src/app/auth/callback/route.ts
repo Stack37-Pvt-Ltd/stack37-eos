@@ -23,8 +23,44 @@ import type { EmailOtpType } from '@supabase/supabase-js';
  * Open-Redirect Defense:
  * The `next` destination parameter is strictly sanitized via `sanitizeRedirectPath`.
  */
+/**
+ * Validates whether the callback request host is an approved EOS host.
+ * Prevents DNS rebinding and cross-site callback manipulation.
+ */
+function isApprovedCallbackHost(host: string): boolean {
+  if (!host) return false;
+  const cleanHost = host.split(':')[0].toLowerCase();
+
+  // Local development / testing environments
+  if (
+    cleanHost === 'localhost' ||
+    cleanHost === '127.0.0.1' ||
+    cleanHost.endsWith('.localhost')
+  ) {
+    return true;
+  }
+
+  // Production EOS hosts (mybusiness or tenant subdomains)
+  if (cleanHost === 'mybusiness.stack37.com' || cleanHost.endsWith('.stack37.com')) {
+    // Specifically block corporate website apex and reserved external subdomains
+    if (cleanHost === 'stack37.com' || cleanHost === 'www.stack37.com') {
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
+  const host = request.headers.get('host') || requestUrl.host;
+
+  // Validate callback origin against approved EOS hosts
+  if (!isApprovedCallbackHost(host)) {
+    return new NextResponse('Bad Request: Invalid callback host', { status: 400 });
+  }
+
   const code = requestUrl.searchParams.get('code');
   const tokenHash = requestUrl.searchParams.get('token_hash');
   const type = requestUrl.searchParams.get('type') as EmailOtpType | null;

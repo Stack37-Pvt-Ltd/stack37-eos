@@ -365,16 +365,26 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(token).toContain('recovery-user-999:');
     });
 
-    it('does not set recovery cookie for non-recovery verification (e.g. signup confirmation)', async () => {
+    it('does not set recovery cookie for non-recovery verification (signup with type=email or type=signup)', async () => {
       mockVerifyOtp.mockResolvedValue({ data: { user: { id: 'signup-user-123' } }, error: null });
 
       const req = new NextRequest(
-        'http://mybusiness.localhost:3000/auth/callback?token_hash=mock-hash&type=signup&next=/select-organization'
+        'http://mybusiness.localhost:3000/auth/callback?token_hash=mock-hash&type=email&next=/select-organization'
       );
       const res = await authCallbackGET(req);
 
       expect(res.status).toBe(307);
+      expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/select-organization');
       expect(res.cookies.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
+    });
+
+    it('rejects unapproved callback hosts with 400 Bad Request', async () => {
+      const req = new NextRequest(
+        'http://attacker.com/auth/callback?token_hash=mock-hash&type=email',
+        { headers: { host: 'attacker.com' } }
+      );
+      const res = await authCallbackGET(req);
+      expect(res.status).toBe(400);
     });
 
     it('neutralizes malicious external redirect targets', async () => {

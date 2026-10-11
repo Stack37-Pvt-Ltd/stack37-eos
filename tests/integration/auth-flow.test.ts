@@ -35,6 +35,7 @@ const FIXTURE_LOG_PATH = path.resolve(__dirname, '.auth-test-fixtures.json');
 interface AuthFixtureManifest {
   timestamp: string;
   runSuffix: string;
+  suffix: string;
   projectRef: string;
   organizations: string[];
   plans: string[];
@@ -45,6 +46,7 @@ interface AuthFixtureManifest {
 const fixtureState: AuthFixtureManifest = {
   timestamp: new Date().toISOString(),
   runSuffix: '',
+  suffix: '',
   projectRef: EXPECTED_PROJECT_REF,
   organizations: [],
   plans: [],
@@ -127,6 +129,7 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
 
     runSuffix = randomUUID().slice(0, 8);
     fixtureState.runSuffix = runSuffix;
+    fixtureState.suffix = runSuffix;
 
     adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -174,26 +177,28 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
       return { id: uid, client: userClient };
     };
 
+    const testEmailDomain = process.env.EOS_TEST_EMAIL_DOMAIN || 'stack37.com';
+
     // 2. Create User 1: Primary Owner of Org A
-    const ownerAEmail = `test-auth-${runSuffix}-ownera@stack37.test`;
+    const ownerAEmail = `dev-test+auth-${runSuffix}-ownera@${testEmailDomain}`;
     const user1 = await createAndAuthUser(ownerAEmail);
     ownerAId = user1.id;
     clientOwnerA = user1.client;
 
     // 3. Create User 4: Primary Owner of Org B
-    const ownerBEmail = `test-auth-${runSuffix}-ownerb@stack37.test`;
+    const ownerBEmail = `dev-test+auth-${runSuffix}-ownerb@${testEmailDomain}`;
     const user4 = await createAndAuthUser(ownerBEmail);
     ownerBId = user4.id;
     clientOwnerB = user4.client;
 
     // 4. Create User 2: Multi-Org Member
-    const multiOrgEmail = `test-auth-${runSuffix}-multiorg@stack37.test`;
+    const multiOrgEmail = `dev-test+auth-${runSuffix}-multiorg@${testEmailDomain}`;
     const user2 = await createAndAuthUser(multiOrgEmail);
     multiOrgUserId = user2.id;
     clientMultiOrg = user2.client;
 
     // 5. Create User 3: Suspended Employee
-    const suspendedEmail = `test-auth-${runSuffix}-suspended@stack37.test`;
+    const suspendedEmail = `dev-test+auth-${runSuffix}-suspended@${testEmailDomain}`;
     const user3 = await createAndAuthUser(suspendedEmail);
     suspendedUserId = user3.id;
 
@@ -290,7 +295,8 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
   // Scenario 1: Signup & Email Confirmation
   // --------------------------------------------------------------------------
   it('1. Signup creates unconfirmed account; confirm via verifyOtp enables authentication', async () => {
-    const signupEmail = `test-auth-${runSuffix}-signup@stack37.test`;
+    const testEmailDomain = process.env.EOS_TEST_EMAIL_DOMAIN || 'stack37.com';
+    const signupEmail = `dev-test+auth-${runSuffix}-signup@${testEmailDomain}`;
     const signupPassword = 'SignupPassword123!';
 
     // Public signup via anon client
@@ -325,9 +331,9 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
     const tokenHash = linkData?.properties?.hashed_token;
     expect(tokenHash).toBeDefined();
 
-    // Simulate callback route GET execution with token_hash and type=signup
+    // Simulate callback route GET execution with token_hash and type=email
     const req = new NextRequest(
-      `http://mybusiness.localhost:3000/auth/callback?token_hash=${tokenHash}&type=signup&next=/select-organization`
+      `http://mybusiness.localhost:3000/auth/callback?token_hash=${tokenHash}&type=email&next=/select-organization`
     );
     const res = await authCallbackGET(req);
 
@@ -353,7 +359,8 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
   // Scenario 2: Login & Logout
   // --------------------------------------------------------------------------
   it('2. Login issues valid session; local logout clears session; global logout revokes refresh tokens', async () => {
-    const ownerAEmail = `test-auth-${runSuffix}-ownera@stack37.test`;
+    const testEmailDomain = process.env.EOS_TEST_EMAIL_DOMAIN || 'stack37.com';
+    const ownerAEmail = `dev-test+auth-${runSuffix}-ownera@${testEmailDomain}`;
 
     // 1. Login with valid credentials
     const { data: loginData, error: loginErr } = await anonSupabase.auth.signInWithPassword({
@@ -392,7 +399,8 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
   // Scenario 3: Password Recovery
   // --------------------------------------------------------------------------
   it('3. Password recovery verifies token hash, sets scoped recovery cookie, and updates password', async () => {
-    const ownerBEmail = `test-auth-${runSuffix}-ownerb@stack37.test`;
+    const testEmailDomain = process.env.EOS_TEST_EMAIL_DOMAIN || 'stack37.com';
+    const ownerBEmail = `dev-test+auth-${runSuffix}-ownerb@${testEmailDomain}`;
     const newPassword = 'NewOwnerBPassword123!Secure';
 
     // Generate recovery link via admin API
@@ -530,7 +538,8 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
   // --------------------------------------------------------------------------
   it('8. Suspended employee is rejected under RLS and cannot view organizations', async () => {
     // Authenticate as suspended User 3
-    const suspendedEmail = `test-auth-${runSuffix}-suspended@stack37.test`;
+    const testEmailDomain = process.env.EOS_TEST_EMAIL_DOMAIN || 'stack37.com';
+    const suspendedEmail = `dev-test+auth-${runSuffix}-suspended@${testEmailDomain}`;
     const clientSuspended = createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
@@ -592,7 +601,8 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
   // Scenario 10: Session Expiration & Refresh
   // --------------------------------------------------------------------------
   it('10. Refresh token exchange issues new valid session tokens', async () => {
-    const ownerAEmail = `test-auth-${runSuffix}-ownera@stack37.test`;
+    const testEmailDomain = process.env.EOS_TEST_EMAIL_DOMAIN || 'stack37.com';
+    const ownerAEmail = `dev-test+auth-${runSuffix}-ownera@${testEmailDomain}`;
 
     // 1. Login to obtain refresh token
     const { data: loginData } = await anonSupabase.auth.signInWithPassword({
