@@ -1,14 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+import { headers } from 'next/headers';
 import {
   loginAction,
   signupAction,
   forgotPasswordAction,
   resetPasswordAction,
   logoutAction,
+  confirmOtpAction,
 } from '../../src/lib/actions/auth';
 import { GET as authCallbackGET } from '../../src/app/auth/callback/route';
 import { GET as logoutGET, POST as logoutPOST } from '../../src/app/auth/logout/route';
+import ConfirmPage from '../../src/app/auth/confirm/page';
 import { createRecoveryToken, RECOVERY_COOKIE_NAME } from '../../src/lib/auth/recovery-token';
 
 // Mock cookies
@@ -173,7 +176,7 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(mockResetPasswordForEmail).toHaveBeenCalledWith(
         'user@example.com',
         expect.objectContaining({
-          redirectTo: expect.stringContaining('/auth/callback?next=/reset-password'),
+          redirectTo: expect.stringContaining('/auth/confirm?next=/reset-password'),
         })
       );
     });
@@ -289,6 +292,58 @@ describe('Authentication Server Actions & Route Handlers', () => {
 
       // Verifies recovery token cookie was consumed and cleared
       expect(mockCookieMap.has(RECOVERY_COOKIE_NAME)).toBe(false);
+    });
+
+    it('rejects password update with specific mismatch error when confirmation differs', async () => {
+      const result = await resetPasswordAction({
+        password: 'NewStrongPassword123!',
+        confirmPassword: 'DifferentPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Passwords do not match.');
+      expect(result.fieldErrors?.confirmPassword).toBe('Passwords do not match.');
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+
+    it('returns exact same-password error message when Supabase returns same_password error code', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+      mockUpdateUser.mockResolvedValue({
+        data: { user: null },
+        error: { code: 'same_password', message: 'New password should be different from the old password.' },
+      });
+
+      const validToken = createRecoveryToken('user-123', 900);
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, validToken);
+
+      const result = await resetPasswordAction({
+        password: 'SamePassword123!',
+        confirmPassword: 'SamePassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Your new password must be different from your current password.');
+      expect(result.fieldErrors?.password).toBe('Your new password must be different from your current password.');
+    });
+
+    it('returns specific weak password error when Supabase rejects password as weak', async () => {
+      mockGetUser.mockResolvedValue({ data: { user: { id: 'user-123' } }, error: null });
+      mockUpdateUser.mockResolvedValue({
+        data: { user: null },
+        error: { code: 'weak_password', message: 'Password is too weak or compromised.' },
+      });
+
+      const validToken = createRecoveryToken('user-123', 900);
+      mockCookieMap.set(RECOVERY_COOKIE_NAME, validToken);
+
+      const result = await resetPasswordAction({
+        password: 'ComplexPassword123!',
+        confirmPassword: 'ComplexPassword123!',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Password is too weak or compromised.');
+      expect(result.fieldErrors?.password).toBe('Password is too weak or compromised.');
     });
   });
 
@@ -507,6 +562,181 @@ describe('Authentication Server Actions & Route Handlers', () => {
       expect(body.success).toBe(true);
       expect(body.scope).toBe('global');
       expect(mockSignOut).toHaveBeenCalledWith({ scope: 'global' });
+    });
+  });
+
+  describe('confirmOtpAction (Intermediate Confirmation Security Invariants)', () => {
+    it('rejects confirmation requests from unapproved host origins', async () => {
+      vi.mocked(headers).mockResolvedValueOnce({
+        get: (key: string) => (key === 'host' ? 'attacker.com' : null),
+      } as unknown as Awaited<ReturnType<typeof headers>>);
+
+      const result = await confirmOtpAction({
+        tokenHash: 'valid-token-hash',
+        type: 'email',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid confirmation host origin');
+      expect(mockVerifyOtp).not.toHaveBeenCalled();
+    });
+
+    it('rejects requests with missing or whitespace tokenHash', async () => {
+      const resultEmpty = await confirmOtpAction({
+        tokenHash: '',
+        type: 'email',
+      });
+      expect(resultEmpty.success).toBe(false);
+      expect(resultEmpty.error).toContain('Invalid or missing confirmation token');
+
+      const resultWhitespace = await confirmOtpAction({
+        tokenHash: '   ',
+        type: 'recovery',
+      });
+      expect(resultWhitespace.success).toBe(false);
+      expect(resultWhitespace.error).toContain('Invalid or missing confirmation token');
+      expect(mockVerifyOtp).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid or unauthorized OTP types', async () => {
+      const result = await confirmOtpAction({
+        tokenHash: 'valid-hash',
+        type: 'sms' as unknown as import('@supabase/supabase-js').EmailOtpType,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid verification token type');
+      expect(mockVerifyOtp).not.toHaveBeenCalled();
+    });
+
+    it('successfully confirms email verification (type=email) and redirects to default safe path without recovery cookie', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { user: { id: 'verified-user-123', email: 'user@example.com' } },
+        error: null,
+      });
+
+      const result = await confirmOtpAction({
+        tokenHash: 'email-confirm-hash-123',
+        type: 'email',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.redirectTo).toBe('/select-organization');
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        token_hash: 'email-confirm-hash-123',
+        type: 'email',
+      });
+      expect(mockCookieMap.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
+    });
+
+    it('successfully confirms email verification (type=signup) and preserves sanitized relative next path', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { user: { id: 'signup-user-456', email: 'founder@example.com' } },
+        error: null,
+      });
+
+      const result = await confirmOtpAction({
+        tokenHash: 'signup-confirm-hash-456',
+        type: 'signup',
+        next: '/custom-welcome',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.redirectTo).toBe('/custom-welcome');
+      expect(mockCookieMap.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
+    });
+
+    it('successfully confirms recovery OTP (type=recovery), issues 15-minute cryptographic sb-recovery-token cookie, and redirects to /reset-password', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { user: { id: 'recovery-user-789', email: 'recovery@example.com' } },
+        error: null,
+      });
+
+      const result = await confirmOtpAction({
+        tokenHash: 'recovery-token-hash-789',
+        type: 'recovery',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.redirectTo).toBe('/reset-password');
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        token_hash: 'recovery-token-hash-789',
+        type: 'recovery',
+      });
+
+      const recoveryToken = mockCookieMap.get(RECOVERY_COOKIE_NAME);
+      expect(recoveryToken).toBeDefined();
+      expect(recoveryToken).toContain('recovery-user-789:');
+    });
+
+    it('neutralizes malicious open-redirect targets in next parameter and falls back to safe destination', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { user: { id: 'open-redirect-target-user' } },
+        error: null,
+      });
+
+      // External HTTP URL
+      const externalResult = await confirmOtpAction({
+        tokenHash: 'token-hash-test',
+        type: 'email',
+        next: 'https://attacker.com/evil',
+      });
+      expect(externalResult.success).toBe(true);
+      expect(externalResult.data?.redirectTo).toBe('/select-organization');
+
+      // Protocol-relative URL
+      const protocolRelativeResult = await confirmOtpAction({
+        tokenHash: 'token-hash-test',
+        type: 'recovery',
+        next: '//attacker.com/evil',
+      });
+      expect(protocolRelativeResult.success).toBe(true);
+      expect(protocolRelativeResult.data?.redirectTo).toBe('/reset-password');
+    });
+
+    it('handles verifyOtp rejection (expired, already consumed, or forged token) returning sanitized error', async () => {
+      mockVerifyOtp.mockResolvedValue({
+        data: { user: null },
+        error: { message: 'Token has expired or is invalid', status: 400 },
+      });
+
+      const result = await confirmOtpAction({
+        tokenHash: 'expired-or-consumed-hash',
+        type: 'recovery',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('The verification link is invalid or has expired');
+      expect(mockCookieMap.get(RECOVERY_COOKIE_NAME)).toBeUndefined();
+    });
+
+    it('confirms that loading GET /auth/confirm does NOT execute verifyOtp, and verification occurs ONLY upon deliberate action invocation', async () => {
+      // 1. Simulate GET /auth/confirm (rendering intermediate page component)
+      const pageResult = ConfirmPage();
+      expect(pageResult).toBeDefined();
+
+      // Security Invariant: Loading / rendering the intermediate confirmation page must NEVER call verifyOtp.
+      // This defends single-use tokens against automated email scanner crawler consumption.
+      expect(mockVerifyOtp).not.toHaveBeenCalled();
+
+      // 2. Simulate deliberate submission by the customer
+      mockVerifyOtp.mockResolvedValueOnce({
+        data: { user: { id: 'deliberate-user-123', email: 'deliberate@example.com' } },
+        error: null,
+      });
+
+      const actionResult = await confirmOtpAction({
+        tokenHash: 'deliberate-token-hash-123',
+        type: 'email',
+      });
+
+      // Verification occurs ONLY after explicit deliberate submission
+      expect(actionResult.success).toBe(true);
+      expect(mockVerifyOtp).toHaveBeenCalledTimes(1);
+      expect(mockVerifyOtp).toHaveBeenCalledWith({
+        token_hash: 'deliberate-token-hash-123',
+        type: 'email',
+      });
     });
   });
 });

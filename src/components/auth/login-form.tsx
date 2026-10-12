@@ -116,7 +116,7 @@ export function LoginForm() {
 
         <CardFooter className="justify-center">
           <p className="text-zinc-500 text-xs">
-            New to STACK37 EOS?{' '}
+            New to My Business by STACK37?{' '}
             <Link href="/register" className="text-emerald-600 font-semibold hover:underline">
               Create an account
             </Link>

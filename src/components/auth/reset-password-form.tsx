@@ -39,6 +39,7 @@ export function ResetPasswordForm() {
     }
 
     if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
       setFieldErrors({ confirmPassword: 'Passwords do not match.' });
       return;
     }
@@ -81,7 +82,7 @@ export function ResetPasswordForm() {
         <CardContent>
           <Link href="/login" className="block w-full">
             <Button variant="primary" size="md" className="w-full">
-              Sign In to EOS
+              Sign In to My Business by STACK37
             </Button>
           </Link>
         </CardContent>

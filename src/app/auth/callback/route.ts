@@ -2,56 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '../../../lib/supabase/server';
 import { sanitizeRedirectPath } from '../../../lib/validations/auth';
 import { createRecoveryToken, RECOVERY_COOKIE_NAME } from '../../../lib/auth/recovery-token';
+import { isApprovedCallbackHost } from '../../../lib/auth/host';
 import type { EmailOtpType } from '@supabase/supabase-js';
-
 /**
  * Route Handler processing Supabase Auth callbacks.
- * Supports:
- * 1. Standard PKCE authorization code exchange (`code`)
- * 2. Token hash email verification (`token_hash` + `type`)
- * 
- * Password Recovery Security Invariants:
- * 1. Recovery authorization is NEVER derived from user-controlled query parameters.
- * 2. PKCE code exchange (`exchangeCodeForSession`) returns `AuthTokenResponse` ({ user, session })
- *    without `redirectType`, and is NEVER treated as proof of password recovery. Even if
- *    query parameters include `type=recovery`, code exchanges are treated as ordinary login callbacks.
- * 3. Recovery authorization is issued ONLY when Supabase Auth cryptographically confirms a verified
- *    recovery challenge via `supabase.auth.verifyOtp({ token_hash, type: 'recovery' })`.
- * 4. The issued recovery cookie is tamper-resistant (HMAC-SHA256 with dedicated server secret),
- *    strictly bound to the verified user ID, and short-lived (15 minutes).
- * 
- * Open-Redirect Defense:
- * The `next` destination parameter is strictly sanitized via `sanitizeRedirectPath`.
+ * Supports PKCE code exchange and token verification for backward compatibility.
  */
-/**
- * Validates whether the callback request host is an approved EOS host.
- * Prevents DNS rebinding and cross-site callback manipulation.
- */
-function isApprovedCallbackHost(host: string): boolean {
-  if (!host) return false;
-  const cleanHost = host.split(':')[0].toLowerCase();
-
-  // Local development / testing environments
-  if (
-    cleanHost === 'localhost' ||
-    cleanHost === '127.0.0.1' ||
-    cleanHost.endsWith('.localhost')
-  ) {
-    return true;
-  }
-
-  // Production EOS hosts (mybusiness or tenant subdomains)
-  if (cleanHost === 'mybusiness.stack37.com' || cleanHost.endsWith('.stack37.com')) {
-    // Specifically block corporate website apex and reserved external subdomains
-    if (cleanHost === 'stack37.com' || cleanHost === 'www.stack37.com') {
-      return false;
-    }
-    return true;
-  }
-
-  return false;
-}
-
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const host = request.headers.get('host') || requestUrl.host;

@@ -1,7 +1,9 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { requireTenantAccess, getUserOrganizations } from '../../../lib/auth/tenant-guard';
+import { logoutAction } from '../../../lib/actions/auth';
 import { TenantAccessDenied } from '../../../components/tenant/access-denied';
 import { OrganizationSwitcher } from '../../../components/tenant/organization-switcher';
 import {
@@ -51,6 +53,12 @@ export default async function TenantLayout(props: {
   const headerList = await headers();
   const currentHost = headerList.get('host') || '';
 
+  async function handleSignOut() {
+    'use server';
+    await logoutAction({ scope: 'local' });
+    redirect('/login');
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col antialiased">
       {/* Top Navbar */}
@@ -90,7 +98,7 @@ export default async function TenantLayout(props: {
             )}
           </div>
 
-          <form action="/auth/logout" method="POST">
+          <form action={handleSignOut}>
             <button
               type="submit"
               className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 border border-zinc-200/80 hover:bg-zinc-50 px-2.5 py-1 rounded-lg transition-colors"

@@ -6,13 +6,16 @@ import {
   signupSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  sanitizeRedirectPath,
   LoginInput,
   SignupInput,
   ForgotPasswordInput,
   ResetPasswordInput,
 } from '../validations/auth';
 import { headers, cookies } from 'next/headers';
-import { verifyRecoveryToken, RECOVERY_COOKIE_NAME } from '../auth/recovery-token';
+import { createRecoveryToken, verifyRecoveryToken, RECOVERY_COOKIE_NAME } from '../auth/recovery-token';
+import { isApprovedCallbackHost } from '../auth/host';
+import type { EmailOtpType } from '@supabase/supabase-js';
 
 export interface AuthActionResult<T = unknown> {
   success: boolean;
@@ -108,7 +111,7 @@ export async function signupAction(
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/select-organization`,
+      emailRedirectTo: `${origin}/auth/confirm?next=/select-organization`,
       data: {
         full_name: fullName,
       },
@@ -169,11 +172,11 @@ export async function forgotPasswordAction(
   const supabase = await createClient();
 
   // Dispatches password recovery email.
-  // The Supabase email template should link to:
-  // {{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password
-  // Upon clicking, the token_hash is cryptographically verified by GoTrue via verifyOtp in /auth/callback.
+  // The Supabase email template directs the user to the intermediate confirmation page:
+  // {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password
+  // GET requests do not consume the single-use token.
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    redirectTo: `${origin}/auth/confirm?next=/reset-password`,
   });
 
   // Always return identical success notice regardless of account existence
@@ -200,9 +203,10 @@ export async function resetPasswordAction(
       const field = issue.path[0]?.toString() || 'form';
       fieldErrors[field] = issue.message;
     }
+    const isMismatch = validation.error.issues.some((i) => i.message === 'Passwords do not match.');
     return {
       success: false,
-      error: 'Please correct the errors in the form.',
+      error: isMismatch ? 'Passwords do not match.' : 'Please correct the errors in the form.',
       fieldErrors,
     };
   }
@@ -238,9 +242,43 @@ export async function resetPasswordAction(
   });
 
   if (error) {
+    const errCode = (error as { code?: string }).code;
+    const errMessage = (error as { message?: string }).message || '';
+
+    if (
+      errCode === 'same_password' ||
+      errMessage.toLowerCase().includes('same password') ||
+      errMessage.toLowerCase().includes('different from the old') ||
+      errMessage.toLowerCase().includes('different from your current')
+    ) {
+      const samePasswordMsg = 'Your new password must be different from your current password.';
+      return {
+        success: false,
+        error: samePasswordMsg,
+        fieldErrors: {
+          password: samePasswordMsg,
+        },
+      };
+    }
+
+    if (
+      errCode === 'weak_password' ||
+      errMessage.toLowerCase().includes('weak') ||
+      errMessage.toLowerCase().includes('pwned')
+    ) {
+      const weakPasswordMsg = errMessage || 'The password provided is too weak. Please choose a stronger password.';
+      return {
+        success: false,
+        error: weakPasswordMsg,
+        fieldErrors: {
+          password: weakPasswordMsg,
+        },
+      };
+    }
+
     return {
       success: false,
-      error: 'Failed to update password. Please ensure it meets complexity requirements and try again.',
+      error: error.message || 'Failed to update password. Please ensure it meets complexity requirements and try again.',
     };
   }
 
@@ -279,5 +317,95 @@ export async function logoutAction(
 
   return {
     success: true,
+  };
+}
+
+export interface ConfirmOtpInput {
+  tokenHash: string;
+  type: EmailOtpType;
+  next?: string;
+}
+
+/**
+ * Confirms email verification or password recovery OTP token server-side upon deliberate user action.
+ * 
+ * Security Invariants:
+ * 1. Single-use token is NEVER consumed upon automated GET crawler inspection.
+ * 2. Host validation: strictly enforces approved EOS host origins.
+ * 3. Token-Type validation: only permits whitelisted email OTP types.
+ * 4. Open-Redirect immunity: strictly sanitizes the 'next' parameter.
+ * 5. Recovery session authorization: strictly issues a cryptographic 15-minute sb-recovery-token
+ *    cookie bound to the verified user ID only when type='recovery'.
+ * 6. Preserves host-only session cookie architecture.
+ */
+export async function confirmOtpAction(
+  input: ConfirmOtpInput
+): Promise<AuthActionResult<{ redirectTo: string }>> {
+  const headerList = await headers();
+  const host = headerList.get('host') || '';
+
+  // 1. Host Validation
+  if (!isApprovedCallbackHost(host)) {
+    return {
+      success: false,
+      error: 'Bad Request: Invalid confirmation host origin.',
+    };
+  }
+
+  const { tokenHash, type, next } = input;
+
+  // 2. Validate token hash presence
+  if (!tokenHash || typeof tokenHash !== 'string' || tokenHash.trim() === '') {
+    return {
+      success: false,
+      error: 'Invalid or missing confirmation token.',
+    };
+  }
+
+  // 3. Validate token type
+  const validTypes: EmailOtpType[] = ['email', 'signup', 'recovery', 'invite', 'magiclink'];
+  if (!type || !validTypes.includes(type)) {
+    return {
+      success: false,
+      error: 'Invalid verification token type.',
+    };
+  }
+
+  // 4. Safe destination sanitization
+  const defaultDestination = type === 'recovery' ? '/reset-password' : '/select-organization';
+  const safeDestination = sanitizeRedirectPath(next, defaultDestination);
+
+  // 5. Verify token server-side via Supabase GoTrue
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.verifyOtp({
+    token_hash: tokenHash,
+    type,
+  });
+
+  if (error || !data.user) {
+    return {
+      success: false,
+      error: 'The verification link is invalid or has expired. Please request a new one.',
+    };
+  }
+
+  // 6. Recovery session authorization
+  if (type === 'recovery') {
+    const cookieStore = await cookies();
+    const recoveryToken = createRecoveryToken(data.user.id, 900);
+    cookieStore.set(RECOVERY_COOKIE_NAME, recoveryToken, {
+      path: '/',
+      maxAge: 900,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  }
+
+  return {
+    success: true,
+    data: {
+      redirectTo: safeDestination,
+    },
   };
 }

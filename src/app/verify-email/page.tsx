@@ -4,7 +4,7 @@ import { AuthShell } from '../../components/auth/auth-shell';
 import { VerifyEmailCard } from '../../components/auth/verify-email-card';
 
 export const metadata: Metadata = {
-  title: 'Verify Email — STACK37 EOS',
+  title: 'Verify Email — My Business by STACK37',
   description: 'Verify your work email address to activate your account.',
 };
 

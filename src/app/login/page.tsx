@@ -4,8 +4,8 @@ import { AuthShell } from '../../components/auth/auth-shell';
 import { LoginForm } from '../../components/auth/login-form';
 
 export const metadata: Metadata = {
-  title: 'Sign In — STACK37 EOS',
-  description: 'Sign in to access your STACK37 Enterprise Operating System workspace.',
+  title: 'Sign In — My Business by STACK37',
+  description: 'Sign in to access your My Business by STACK37 organization workspace.',
 };
 
 export default function LoginPage() {

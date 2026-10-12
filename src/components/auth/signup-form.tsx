@@ -84,7 +84,7 @@ export function SignupForm() {
       <CardHeader>
         <CardTitle>Create your account</CardTitle>
         <CardDescription>
-          Get started with STACK37 Enterprise Operating System.
+          Get started with My Business by STACK37.
         </CardDescription>
       </CardHeader>
 

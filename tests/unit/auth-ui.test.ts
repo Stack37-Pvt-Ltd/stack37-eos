@@ -4,12 +4,14 @@ import * as RegisterPage from '../../src/app/register/page';
 import * as VerifyEmailPage from '../../src/app/verify-email/page';
 import * as ForgotPasswordPage from '../../src/app/forgot-password/page';
 import * as ResetPasswordPage from '../../src/app/reset-password/page';
+import * as ConfirmPage from '../../src/app/auth/confirm/page';
 import { AuthShell } from '../../src/components/auth/auth-shell';
 import { LoginForm } from '../../src/components/auth/login-form';
 import { SignupForm } from '../../src/components/auth/signup-form';
 import { ForgotPasswordForm } from '../../src/components/auth/forgot-password-form';
 import { ResetPasswordForm } from '../../src/components/auth/reset-password-form';
 import { VerifyEmailCard } from '../../src/components/auth/verify-email-card';
+import { ConfirmCard } from '../../src/components/auth/confirm-card';
 import { Button } from '../../src/components/ui/button';
 import { Input } from '../../src/components/ui/input';
 import { Alert } from '../../src/components/ui/alert';
@@ -20,37 +22,44 @@ describe('Authentication UI Module Contracts & Architecture', () => {
   describe('Page Exports and Metadata Hierarchy', () => {
     it('exports valid metadata and default component for /login', () => {
       expect(LoginPage.metadata).toBeDefined();
-      expect(LoginPage.metadata.title).toContain('Sign In');
+      expect(LoginPage.metadata.title).toBe('Sign In — My Business by STACK37');
       expect(LoginPage.metadata.description).toBeDefined();
       expect(typeof LoginPage.default).toBe('function');
     });
 
     it('exports valid metadata and default component for /register', () => {
       expect(RegisterPage.metadata).toBeDefined();
-      expect(RegisterPage.metadata.title).toContain('Create Account');
+      expect(RegisterPage.metadata.title).toBe('Create Account — My Business by STACK37');
       expect(RegisterPage.metadata.description).toBeDefined();
       expect(typeof RegisterPage.default).toBe('function');
     });
 
     it('exports valid metadata and default component for /verify-email', () => {
       expect(VerifyEmailPage.metadata).toBeDefined();
-      expect(VerifyEmailPage.metadata.title).toContain('Verify Email');
+      expect(VerifyEmailPage.metadata.title).toBe('Verify Email — My Business by STACK37');
       expect(VerifyEmailPage.metadata.description).toBeDefined();
       expect(typeof VerifyEmailPage.default).toBe('function');
     });
 
     it('exports valid metadata and default component for /forgot-password', () => {
       expect(ForgotPasswordPage.metadata).toBeDefined();
-      expect(ForgotPasswordPage.metadata.title).toContain('Reset Password');
+      expect(ForgotPasswordPage.metadata.title).toBe('Reset Password — My Business by STACK37');
       expect(ForgotPasswordPage.metadata.description).toBeDefined();
       expect(typeof ForgotPasswordPage.default).toBe('function');
     });
 
     it('exports valid metadata and default component for /reset-password', () => {
       expect(ResetPasswordPage.metadata).toBeDefined();
-      expect(ResetPasswordPage.metadata.title).toContain('Set New Password');
+      expect(ResetPasswordPage.metadata.title).toBe('Set New Password — My Business by STACK37');
       expect(ResetPasswordPage.metadata.description).toBeDefined();
       expect(typeof ResetPasswordPage.default).toBe('function');
+    });
+
+    it('exports valid metadata and default component for /auth/confirm', () => {
+      expect(ConfirmPage.metadata).toBeDefined();
+      expect(ConfirmPage.metadata.title).toBe('Confirm Verification — My Business by STACK37');
+      expect(ConfirmPage.metadata.description).toBeDefined();
+      expect(typeof ConfirmPage.default).toBe('function');
     });
   });
 
@@ -77,6 +86,10 @@ describe('Authentication UI Module Contracts & Architecture', () => {
 
     it('exports functional VerifyEmailCard component', () => {
       expect(typeof VerifyEmailCard).toBe('function');
+    });
+
+    it('exports functional ConfirmCard component', () => {
+      expect(typeof ConfirmCard).toBe('function');
     });
 
     it('exports UI primitives (Button, Input, Alert, Card)', () => {
