@@ -39,8 +39,8 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 1. Prevent direct access to internal tenant/registration routes
-  if (url.pathname.startsWith('/tenant') || url.pathname.startsWith('/registration')) {
+  // 1. Prevent direct access to internal tenant routes
+  if (url.pathname.startsWith('/tenant')) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
@@ -70,6 +70,7 @@ export default async function proxy(request: NextRequest) {
     '/reset-password',
     '/verify-email',
     '/select-organization',
+    '/registration',
     '/auth',
   ];
 
@@ -82,8 +83,12 @@ export default async function proxy(request: NextRequest) {
     // Shared authentication routes map directly to top-level handlers
     targetUrl = url;
   } else if (subdomain === 'mybusiness') {
-    // mybusiness subdomain -> registration route
-    url.pathname = `/registration${url.pathname === '/' ? '' : url.pathname}`;
+    // mybusiness subdomain root -> registration route
+    if (url.pathname === '/' || url.pathname === '') {
+      url.pathname = '/registration';
+    } else if (!url.pathname.startsWith('/registration')) {
+      url.pathname = `/registration${url.pathname}`;
+    }
     targetUrl = url;
   } else {
     // Tenant subdomain -> tenant route

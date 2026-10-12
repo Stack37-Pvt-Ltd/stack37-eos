@@ -30,8 +30,8 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/acmecorp/dashboard');
   });
 
-  it('routes shared auth paths (/login, /register, /auth/callback, /forgot-password, /reset-password, /verify-email, /select-organization) on mybusiness', async () => {
-    const authPaths = ['/login', '/register', '/auth/callback', '/forgot-password', '/reset-password', '/verify-email', '/select-organization'];
+  it('routes shared auth paths (/login, /register, /auth/callback, /auth/confirm, /forgot-password, /reset-password, /verify-email, /select-organization) on mybusiness', async () => {
+    const authPaths = ['/login', '/register', '/auth/callback', '/auth/confirm', '/forgot-password', '/reset-password', '/verify-email', '/select-organization'];
     for (const p of authPaths) {
       const req = new NextRequest(`http://mybusiness.localhost:3000${p}`, {
         headers: { host: 'mybusiness.localhost:3000' },
@@ -72,12 +72,26 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     expect(res.status).toBe(404);
   });
 
-  it('blocks direct access to internal /registration routes with 404', async () => {
+  it('routes /registration on mybusiness.localhost without 404 or duplicated path prefix', async () => {
     const req = new NextRequest('http://mybusiness.localhost:3000/registration', {
       headers: { host: 'mybusiness.localhost:3000' },
     });
     const res = await proxy(req);
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    const rewriteHeader = res.headers.get('x-middleware-rewrite');
+    expect(rewriteHeader).toContain('/registration');
+    expect(rewriteHeader).not.toContain('/registration/registration');
+  });
+
+  it('routes /registration on tenant subdomains directly without tenant prefix collision', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/registration', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
+    const rewriteHeader = res.headers.get('x-middleware-rewrite');
+    expect(rewriteHeader).toContain('/registration');
+    expect(rewriteHeader).not.toContain('/tenant/acmecorp/registration');
   });
 
   it('blocks root host without subdomain with 404', async () => {

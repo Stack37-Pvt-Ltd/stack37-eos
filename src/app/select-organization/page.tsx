@@ -6,7 +6,7 @@ import { createClient } from '../../lib/supabase/server';
 import { logoutAction } from '../../lib/actions/auth';
 import { getUserOrganizations, getTenantWorkspaceUrl } from '../../lib/auth/tenant-guard';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../components/ui/card';
-import { Building2, ArrowRight, ShieldCheck, UserCircle } from 'lucide-react';
+import { Building2, ArrowRight, ShieldCheck, UserCircle, Plus } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Select Organization — My Business by STACK37',
@@ -111,8 +111,29 @@ export default async function SelectOrganizationPage() {
                 </div>
                 <h3 className="font-semibold text-sm text-zinc-800">No active workspaces</h3>
                 <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                  Your account does not currently have active membership in any organization. If you were recently invited, check your email for an invitation.
+                  Your account does not currently have active membership in any organization. If you were recently invited, check your email for an invitation, or register a new business below.
                 </p>
+                <div className="pt-2">
+                  <Link
+                    href="/registration"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded-lg shadow-xs transition-colors"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Register a Business</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {organizations.length > 0 && (
+              <div className="pt-1 text-center">
+                <Link
+                  href="/registration"
+                  className="inline-flex items-center gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 font-semibold transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Register another business</span>
+                </Link>
               </div>
             )}
 

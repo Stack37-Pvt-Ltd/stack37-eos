@@ -5,6 +5,7 @@ import * as VerifyEmailPage from '../../src/app/verify-email/page';
 import * as ForgotPasswordPage from '../../src/app/forgot-password/page';
 import * as ResetPasswordPage from '../../src/app/reset-password/page';
 import * as ConfirmPage from '../../src/app/auth/confirm/page';
+import * as RegistrationLayout from '../../src/app/registration/layout';
 import { AuthShell } from '../../src/components/auth/auth-shell';
 import { LoginForm } from '../../src/components/auth/login-form';
 import { SignupForm } from '../../src/components/auth/signup-form';
@@ -12,6 +13,7 @@ import { ForgotPasswordForm } from '../../src/components/auth/forgot-password-fo
 import { ResetPasswordForm } from '../../src/components/auth/reset-password-form';
 import { VerifyEmailCard } from '../../src/components/auth/verify-email-card';
 import { ConfirmCard } from '../../src/components/auth/confirm-card';
+import { RegistrationForm } from '../../src/components/organization/registration-form';
 import { Button } from '../../src/components/ui/button';
 import { Input } from '../../src/components/ui/input';
 import { Alert } from '../../src/components/ui/alert';
@@ -61,9 +63,19 @@ describe('Authentication UI Module Contracts & Architecture', () => {
       expect(ConfirmPage.metadata.description).toBeDefined();
       expect(typeof ConfirmPage.default).toBe('function');
     });
+
+    it('exports valid metadata and default component for /registration layout', () => {
+      expect(RegistrationLayout.metadata).toBeDefined();
+      expect(RegistrationLayout.metadata.title).toBe('Register Business — My Business by STACK37');
+      expect(RegistrationLayout.metadata.description).toBeDefined();
+      expect(typeof RegistrationLayout.default).toBe('function');
+    });
   });
 
   describe('UI Component Definitions & Component Contracts', () => {
+    it('exports functional RegistrationForm component', () => {
+      expect(typeof RegistrationForm).toBe('function');
+    });
     it('exports functional AuthShell wrapper', () => {
       expect(typeof AuthShell).toBe('function');
     });
