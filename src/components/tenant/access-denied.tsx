@@ -112,7 +112,7 @@ export function TenantAccessDenied({
 
           <CardFooter className="justify-center border-t border-zinc-100 pt-4">
             <p className="text-[11px] text-zinc-400 text-center">
-              STACK37 EOS Multi-Tenant Isolation Protection
+              My Business by STACK37 Multi-Tenant Security
             </p>
           </CardFooter>
         </Card>

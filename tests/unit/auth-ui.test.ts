@@ -6,6 +6,7 @@ import * as ForgotPasswordPage from '../../src/app/forgot-password/page';
 import * as ResetPasswordPage from '../../src/app/reset-password/page';
 import * as ConfirmPage from '../../src/app/auth/confirm/page';
 import * as RegistrationLayout from '../../src/app/registration/layout';
+import * as TenantLayout from '../../src/app/tenant/[tenantSlug]/layout';
 import { AuthShell } from '../../src/components/auth/auth-shell';
 import { LoginForm } from '../../src/components/auth/login-form';
 import { SignupForm } from '../../src/components/auth/signup-form';
@@ -69,6 +70,13 @@ describe('Authentication UI Module Contracts & Architecture', () => {
       expect(RegistrationLayout.metadata.title).toBe('Register Business — My Business by STACK37');
       expect(RegistrationLayout.metadata.description).toBeDefined();
       expect(typeof RegistrationLayout.default).toBe('function');
+    });
+
+    it('exports valid metadata and default component for /tenant/[tenantSlug] layout', () => {
+      expect(TenantLayout.metadata).toBeDefined();
+      expect(TenantLayout.metadata.title).toBe('Workspace — My Business by STACK37');
+      expect(TenantLayout.metadata.description).toBeDefined();
+      expect(typeof TenantLayout.default).toBe('function');
     });
   });
 

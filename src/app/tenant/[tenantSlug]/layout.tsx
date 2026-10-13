@@ -1,7 +1,13 @@
 import * as React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+
+export const metadata: Metadata = {
+  title: 'Workspace — My Business by STACK37',
+  description: 'Multi-tenant isolated workspace on My Business by STACK37.',
+};
 import { requireTenantAccess, getUserOrganizations } from '../../../lib/auth/tenant-guard';
 import { logoutAction } from '../../../lib/actions/auth';
 import { TenantAccessDenied } from '../../../components/tenant/access-denied';
@@ -66,14 +72,16 @@ export default async function TenantLayout(props: {
         <div className="flex items-center gap-4">
           <Link
             href="/"
-            className="flex items-center gap-1.5 font-black text-lg tracking-tight text-zinc-900 group select-none"
+            className="flex items-center gap-2 group select-none"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-white group-hover:bg-emerald-600 transition-colors">
               <span className="text-emerald-400 group-hover:text-white font-bold text-xs">37</span>
             </span>
-            <span className="tracking-tighter text-sm font-black hidden sm:inline">STACK37</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-1 py-0.2 rounded">
-              EOS
+            <span className="font-bold text-sm tracking-tight text-zinc-900 hidden sm:inline">
+              My Business
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded hidden sm:inline">
+              by STACK37
             </span>
           </Link>
 
