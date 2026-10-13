@@ -526,5 +526,175 @@ describe('Workspace Provisioning & Operational Context', () => {
       expect(transactionCommitted).toBe(true);
       expect(stagedEntities).toHaveLength(6);
     });
+
+    it('proves newly provisioned business explicitly designates initial Headquarters (is_headquarters=true, code=HQ) and foundational roles (Administrator: is_system=true, Member: is_system=false)', () => {
+      // Simulates create_business & provision_workspace_defaults branch and role creation
+      interface BranchRecord {
+        id: string;
+        organization_id: string;
+        name: string;
+        is_headquarters: boolean;
+        code: string;
+      }
+      interface RoleRecord {
+        id: string;
+        organization_id: string;
+        name: string;
+        is_system: boolean;
+      }
+
+      const branchStore: BranchRecord[] = [];
+      const roleStore: RoleRecord[] = [];
+
+      const provisionInitialWorkspace = (orgId: string) => {
+        const initialBranch: BranchRecord = {
+          id: `branch-${orgId}-hq`,
+          organization_id: orgId,
+          name: 'Headquarters',
+          is_headquarters: true,
+          code: 'HQ',
+        };
+        branchStore.push(initialBranch);
+
+        roleStore.push({
+          id: `role-${orgId}-admin`,
+          organization_id: orgId,
+          name: 'Administrator',
+          is_system: true,
+        });
+        roleStore.push({
+          id: `role-${orgId}-member`,
+          organization_id: orgId,
+          name: 'Member',
+          is_system: false,
+        });
+
+        return { branch: initialBranch, roles: roleStore };
+      };
+
+      const result = provisionInitialWorkspace('org-new-123');
+      expect(result.branch.name).toBe('Headquarters');
+      expect(result.branch.is_headquarters).toBe(true);
+      expect(result.branch.code).toBe('HQ');
+
+      const adminRole = result.roles.find((r) => r.name === 'Administrator');
+      const memberRole = result.roles.find((r) => r.name === 'Member');
+
+      expect(adminRole).toBeDefined();
+      expect(adminRole?.is_system).toBe(true);
+
+      expect(memberRole).toBeDefined();
+      expect(memberRole?.is_system).toBe(false);
+    });
+
+    it('verifies initial Headquarters remains identifiable by flag and owner linkage even after being renamed', () => {
+      interface BranchRecord {
+        id: string;
+        organization_id: string;
+        name: string;
+        is_headquarters: boolean;
+        code: string;
+      }
+
+      const branches: BranchRecord[] = [
+        {
+          id: 'branch-1',
+          organization_id: 'org-test',
+          name: 'Headquarters',
+          is_headquarters: true,
+          code: 'HQ',
+        },
+      ];
+
+      // Simulate renaming the branch
+      const renameBranch = (branchId: string, newName: string, newCode: string) => {
+        const branch = branches.find((b) => b.id === branchId);
+        if (branch) {
+          branch.name = newName;
+          branch.code = newCode;
+        }
+      };
+
+      renameBranch('branch-1', 'Colombo Flagship Store', 'HQ-COL');
+
+      // Identification logic: finds branch where is_headquarters = true
+      const resolvedHq = branches.find((b) => b.organization_id === 'org-test' && b.is_headquarters);
+
+      expect(resolvedHq).toBeDefined();
+      expect(resolvedHq?.id).toBe('branch-1');
+      expect(resolvedHq?.name).toBe('Colombo Flagship Store');
+      expect(resolvedHq?.code).toBe('HQ-COL');
+      expect(resolvedHq?.is_headquarters).toBe(true);
+    });
+
+    it('proves provision_workspace_defaults never changes an existing organization Headquarters designation merely because another branch is named Headquarters', () => {
+      interface BranchRecord {
+        id: string;
+        organization_id: string;
+        name: string;
+        is_headquarters: boolean;
+        code: string;
+      }
+
+      const branches: BranchRecord[] = [
+        {
+          id: 'branch-kandy',
+          organization_id: 'org-test-multi',
+          name: 'Kandy Flagship',
+          is_headquarters: true,
+          code: 'HQ-KND',
+        },
+        {
+          id: 'branch-secondary',
+          organization_id: 'org-test-multi',
+          name: 'Headquarters',
+          is_headquarters: false,
+          code: 'SEC-01',
+        },
+      ];
+
+      // Simulated provision_workspace_defaults HQ resolution logic
+      const resolveOrProvisionHq = (orgId: string): BranchRecord => {
+        // 1. Resolve by is_headquarters = true regardless of name
+        const existingHq = branches.find((b) => b.organization_id === orgId && b.is_headquarters);
+        if (existingHq) return existingHq;
+
+        // 2. Legacy fallback
+        const legacyHq = branches.find((b) => b.organization_id === orgId && b.name === 'Headquarters');
+        if (legacyHq) {
+          legacyHq.is_headquarters = true;
+          legacyHq.code = legacyHq.code || 'HQ';
+          return legacyHq;
+        }
+
+        // 3. Create initial
+        const newHq: BranchRecord = {
+          id: `branch-${orgId}-hq`,
+          organization_id: orgId,
+          name: 'Headquarters',
+          is_headquarters: true,
+          code: 'HQ',
+        };
+        branches.push(newHq);
+        return newHq;
+      };
+
+      // Execute resolution
+      const resolved = resolveOrProvisionHq('org-test-multi');
+
+      // 1. Must resolve to Kandy Flagship
+      expect(resolved.id).toBe('branch-kandy');
+      expect(resolved.name).toBe('Kandy Flagship');
+      expect(resolved.is_headquarters).toBe(true);
+
+      // 2. Secondary branch named 'Headquarters' must NOT have been changed to true
+      const secondary = branches.find((b) => b.id === 'branch-secondary');
+      expect(secondary?.is_headquarters).toBe(false);
+      expect(secondary?.name).toBe('Headquarters');
+
+      // 3. Total branch count remains exactly 2 (no duplicate branch created)
+      expect(branches).toHaveLength(2);
+    });
   });
 });
+

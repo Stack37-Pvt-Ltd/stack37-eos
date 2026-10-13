@@ -137,10 +137,13 @@ export default async function TenantLayout(props: {
               <span>Modules</span>
             </div>
 
-            <div className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-400 hover:text-zinc-700 rounded-lg cursor-not-allowed">
-              <Settings className="h-4 w-4" />
+            <Link
+              href="/settings"
+              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-lg transition-colors"
+            >
+              <Settings className="h-4 w-4 text-zinc-500" />
               <span>Settings</span>
-            </div>
+            </Link>
           </nav>
 
           <div className="border-t border-zinc-100 pt-3">

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireTenantAccess } from '../../../lib/auth/tenant-guard';
 import { getWorkspaceOperationalData } from '../../../lib/auth/workspace-context';
 import {
@@ -149,11 +150,20 @@ export default async function TenantPage(props: {
 
       {/* Operational Readiness Panel */}
       <div className="bg-white border border-zinc-200/80 rounded-xl p-6 shadow-2xs">
-        <div className="flex items-center gap-2 mb-4">
-          <ShieldCheck className="h-5 w-5 text-emerald-600" />
-          <h2 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">
-            Workspace Provisioning Status
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" />
+            <h2 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">
+              Workspace Provisioning Status
+            </h2>
+          </div>
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100/80 border border-emerald-200/60 px-3 py-1.5 rounded-lg transition-colors self-start sm:self-auto"
+          >
+            <span>Configure Business</span>
+            <span aria-hidden="true">&rarr;</span>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
