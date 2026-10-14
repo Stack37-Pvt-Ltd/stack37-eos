@@ -43,6 +43,16 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     }
   });
 
+  it('routes invitation acceptance as a shared auth path without rewriting it under registration', async () => {
+    const req = new NextRequest('http://mybusiness.localhost:3000/invite/accept?token=opaque-token', {
+      headers: { host: 'mybusiness.localhost:3000' },
+    });
+    const res = await proxy(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-rewrite')).toContain('/invite/accept?token=opaque-token');
+    expect(res.headers.get('x-middleware-rewrite')).not.toContain('/registration');
+  });
+
   it('routes shared auth paths (/login, /auth/callback) on tenant subdomains', async () => {
     const req = new NextRequest('http://acmecorp.localhost:3000/login', {
       headers: { host: 'acmecorp.localhost:3000' },

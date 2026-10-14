@@ -11,7 +11,7 @@ const stub = `
 import React from 'react';
 export const useRouter=()=>({push:p=>window.__qa.navigation.push(p),refresh:()=>{}});
 export const useSearchParams=()=>new URLSearchParams(location.search);
-export const usePathname=()=>location.pathname==='/settings'||new URLSearchParams(location.search).get('screen')==='settings'?'/settings':'/';
+export const usePathname=()=>new URLSearchParams(location.search).get('screen')==='team'?'/settings/team':location.pathname==='/settings'||new URLSearchParams(location.search).get('screen')==='settings'?'/settings':'/';
 export default function Element({children,priority,fill,prefetch,replace,scroll,...props}){return React.createElement(props.src?'img':'a',props,children)}
 async function reply(name,input) {
  window.__qa.calls.push({name,input});
@@ -44,12 +44,13 @@ const bundled = await build({
  }}],
 });
 const processed = await postcss([tailwind({base:root})]).process(await readFile(path.join(root,'src/app/globals.css'),'utf8'),{from:path.join(root,'src/app/globals.css')});
-const media = path.join(root,'.next/dev/static/media');
+const media = process.env.STACK37_REVIEW_FONT_DIR || path.join(root,'.next/dev/static/media');
 const fonts = await readdir(media);
 const sans = fonts.find(f=>f.startsWith('caa3a2')&&f.endsWith('.woff2'));
 const mono = fonts.find(f=>f.startsWith('797e43')&&f.endsWith('.woff2'));
 const css = processed.css + `@font-face{font-family:Geist;src:url('/font-sans.woff2');font-weight:100 900}@font-face{font-family:'Geist Mono';src:url('/font-mono.woff2');font-weight:100 900}:root{--font-geist-sans:Geist;--font-geist-mono:'Geist Mono'}`;
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TASK-STAB-004 · Local UI review</title><link rel="stylesheet" href="/ui.css"></head><body><div id="root"></div><script type="module" src="/ui.js"></script></body></html>`;
+const port = Number(process.env.STACK37_REVIEW_PORT || 3002);
 createServer(async(req,res)=>{
  try {
   const pathname = new URL(req.url,'http://127.0.0.1').pathname;
@@ -64,4 +65,4 @@ createServer(async(req,res)=>{
   else if(pathname==='/font-sans.woff2'||pathname==='/font-mono.woff2'){res.setHeader('Content-Type','font/woff2');res.end(await readFile(path.join(media,pathname.includes('sans')?sans:mono)))}
   else{res.setHeader('Content-Type','text/html');res.end(html)}
  }catch{res.statusCode=500;res.end('Review asset unavailable')}
-}).listen(3002,'127.0.0.1',()=>console.log('Isolated UI review: http://127.0.0.1:3002 · no live backend'));
+}).listen(port,'127.0.0.1',()=>console.log(`Isolated UI review: http://127.0.0.1:${port} · no live backend`));

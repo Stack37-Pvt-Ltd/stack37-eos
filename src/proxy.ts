@@ -72,6 +72,7 @@ export default async function proxy(request: NextRequest) {
     '/select-organization',
     '/registration',
     '/auth',
+    '/invite/accept',
   ];
 
   const isSharedAuthRoute = SHARED_AUTH_PREFIXES.some(

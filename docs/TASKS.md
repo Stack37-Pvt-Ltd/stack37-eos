@@ -42,9 +42,10 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 | **TASK-STAB-005A** | **Backend Integration Readiness**<br>Authoritative integration specification and API contracts. | Google Antigravity | P0 | **COMPLETED** | `docs/integration/backend_integration_readiness.md` |
 | **TASK-STAB-005B** | **Backend Safeguards & Memory Update**<br>Targeted security tests and project-memory synchronization. | Google Antigravity | P0 | **ACCEPTED** | `tests/unit/backend-security-safeguards.test.ts`<br>`docs/integration/*`<br>`docs/verification/*`<br>Project memory files |
 | **TASK-STAB-005C** | **Focused Backend Corrections**<br>Integrate approved Settings permission and Standard trial-plan corrections. | Antigravity author; Codex integration | P0 | **READY_FOR_REVIEW — INTEGRATED_LOCAL** | Two backend files, three unit-test files, corrections integration report |
-| **TASK-STAB-005** | **Integrated Verification**<br>Joint verification across backend safeguards and aligned UI; real database/authentication gates pending. | Joint (Antigravity + Codex) | P0 | **IN_PROGRESS — LOCAL PHASE ACCEPTED** | Local frontend/backend files, unit tests, governance and verification records |
+| **TASK-STAB-005** | **Integrated Verification**<br>Joint verification across backend safeguards and aligned UI; real database/authentication gates pending. | Joint (Antigravity + Codex) | P0 | **IN_PROGRESS — LOCAL PHASE ACCEPTED under DEC-016** | Local frontend/backend files, unit tests, governance and verification records |
+| **TASK-TEAM-001** | **Team Management Frontend & Local Integration**<br>Integrate employee roster, invitations, access management and invitation route with the accepted backend contract. | Joint (Antigravity + Codex) | P1 | **IN_PROGRESS — BACKEND ACCEPTED under DEC-018; LOCAL INTEGRATION MILESTONE ACCEPTED under DEC-019** | Team integration worktree, Team Management UI/actions, tests and runtime route evidence; real verification pending |
 
-*Note: Milestone 2 (Team Collaboration) and all ERP modules are blocked until Tasks STAB-001 through STAB-005 are accepted.*
+*Note: TASK-STAB-005 remains IN_PROGRESS under DEC-016 until its real verification gates are complete. TASK-TEAM-001's local integration milestone is accepted, but the Team Management feature remains IN_PROGRESS; this does not accept the overall feature or authorize ERP modules. The enhanced multi-business workspace selector remains future scope under DEC-017.*
 
 ---
 
@@ -206,6 +207,18 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 * **Remaining gates / risks:** Real owner/user/organization authorization and deferred membership-ID hardening; subscription fallback, configured trial and entitlement/status verification; PostgreSQL RLS tenant isolation; provisioning rollback/constraint integrity; real authentication, email confirmation/recovery, subdomain cookies, organization switching, and Settings persistence. Details remain in `PROJECT_STATE.md` and the integration report. Prepare and authorize an isolated test environment and exact fixture cleanup before real database/authentication tests.
 * **Acceptance documentation scope:** Updated only `PROJECT_STATE.md`, `docs/TASKS.md`, and `docs/reviews/TASK-STAB-005/INTEGRATION-REPORT.md` to record this CEO decision. No runtime implementation or security-test assertion changes.
 * **Boundary:** Await separate CEO authorization. No commit, push, merge, rebase, deployment, production-service modification, deletion of either worktree, deferred hardening implementation, or unrelated changes.
+
+---
+
+### TASK-TEAM-001: Team Management Frontend & Local Integration
+* **Owner:** Joint (Google Antigravity — backend; ChatGPT Codex — frontend/integration)
+* **Status:** `IN_PROGRESS` overall; backend implementation accepted under DEC-018; **local integration milestone ACCEPTED by CEO on October 14, 2026 under DEC-019**.
+* **Accepted milestones:** DEC-018 accepts Antigravity's backend implementation for local development and frontend integration. DEC-019 accepts the local integration milestone only. Neither decision means the Team Management feature is complete, production-ready, or verified against a live database.
+* **Current scope delivered locally:** Team roster and permission presentation; staff invitation and role/branch assignment flows; pending invitation display/cancellation; employee suspend, reinstate, and removal controls with Primary Owner protections; invitation route states. Actual availability remains subject to the integrated backend actions and verification gates.
+* **Security and workflow boundaries:** Invitation acceptance remains disabled. Migration 13 is unapplied and requires separate authorization. Do not enable real invitation acceptance until its database-level security requirements are approved and verified. Preserve the existing organization selection and workspace switching; the enhanced multi-business role-aware selector remains future scope under DEC-017.
+* **Remaining acceptance gates:** Real database and RLS verification; real authentication and identity verification; transaction/rollback checks; and end-to-end employee workflows. These remain **DEFERRED / NOT EXECUTED**. Route rendering and mocked/unit checks do not satisfy these gates.
+* **TASK-STAB-005 dependency:** TASK-STAB-005 remains `IN_PROGRESS` under DEC-016; its real database, RLS, rollback/transaction, and authentication verification remain unfinished.
+* **Change boundary for this CEO acceptance:** Documentation only in the existing `team-integration` worktree. All implementation changes and worktrees are preserved. No commit, push, merge, deployment, database change, or new development task is authorized.
 
 ---
 

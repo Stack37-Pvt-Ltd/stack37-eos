@@ -1,10 +1,10 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
 **Last updated:** October 14, 2026 (Asia/Colombo)
-**Branch:** `codex/task-stab-005-integration` (local, based on `d17ed63a48e2313df0f5406d9074f9076b788721`)
-**Committed baseline:** `d17ed63a48e2313df0f5406d9074f9076b788721`
-**Current task:** `TASK-STAB-005` — IN_PROGRESS; prior local integration ACCEPTED, TASK-STAB-005C corrections integrated locally and READY_FOR_REVIEW; real database/authentication verification DEFERRED / NOT EXECUTED
-**Evidence:** Prior CEO-accepted 189-test integration; combined corrections now pass 194 unit tests, TypeScript and ESLint, with mocked browser workflow checks; no commit or deployment
+**Branch:** `codex/task-team-001-integration` (local, based on `132e54a6bb303700eb132d6e967efbad82e3fda6`)
+**Team integration baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6` (prior STAB integration baseline: `d17ed63a48e2313df0f5406d9074f9076b788721`)
+**Current tasks:** `TASK-TEAM-001` — IN_PROGRESS; backend implementation accepted under DEC-018 and local integration milestone accepted under DEC-019. `TASK-STAB-005` remains IN_PROGRESS under DEC-016.
+**Evidence:** Team integration local checks and built-route review are recorded in the task history; real database, RLS, authentication, transaction, and end-to-end employee workflow verification remain DEFERRED / NOT EXECUTED. No commit or deployment.
 
 ---
 
@@ -25,7 +25,8 @@ The approved TASK-STAB-003 visual direction is recorded in [docs/DESIGN_STANDARD
 | TASK-STAB-005A Backend integration readiness | COMPLETED |
 | TASK-STAB-005B Backend safeguards and memory update | ACCEPTED by CEO |
 | TASK-STAB-005C Focused backend corrections | Integrated locally under CEO authorization; READY_FOR_REVIEW with 194 combined unit tests, TypeScript and ESLint passing |
-| TASK-STAB-005 Integrated verification | IN_PROGRESS — local integration phase ACCEPTED by CEO (October 14, 2026); real database, RLS, rollback and authentication verification is DEFERRED / NOT EXECUTED |
+| TASK-STAB-005 Integrated verification | IN_PROGRESS under DEC-016 — local integration phase accepted; real database, RLS, rollback/transactions and authentication verification DEFERRED / NOT EXECUTED |
+| TASK-TEAM-001 Team Management | IN_PROGRESS — backend accepted under DEC-018; local integration milestone ACCEPTED by CEO under DEC-019; database/security and complete employee workflow verification remain pending |
 
 Future product modules and milestones in [docs/ROADMAP.md](docs/ROADMAP.md) retain their existing scope and status. This snapshot does not authorize new ERP work.
 
@@ -39,7 +40,7 @@ Independent VAT and SSCL settings, team management, ERP operations, subscription
 
 ## Current working tree
 
-Changes are local and uncommitted on `codex/task-stab-005-integration`; baseline `d17ed63a48e2313df0f5406d9074f9076b788721` is unchanged. Separate verified file snapshots of TASK-STAB-004 and TASK-STAB-005B were created under `%TEMP%\STACK37-EOS-TASK-STAB-005-checkpoint-d75b476588e94232a867fceac526991e`; manifests and SHA-256 hashes are recorded in the TASK-STAB-005 integration report. The UI implementation is preserved. The 19 backend safeguard unit tests and checkpointed Version 1.0 verification plan are present in the main project. Four shared governance files were reconciled manually. Codex did not write to Antigravity's worktree. Its revised Version 2.0 plan remains a separate pending proposal at `.worktrees/backend-safeguards/docs/verification/TASK-STAB-005_backend_verification_plan.md`, as directed by the CEO; it has not replaced the integrated Version 1.0 or received execution authorization in this task.
+Changes are local and uncommitted on `codex/task-team-001-integration`; the Team Management implementation and its worktree are preserved. The governance updates in this acceptance are limited to this worktree. The earlier TASK-STAB-005 integration branch and its checkpoints/reports remain preserved; Codex did not write to Antigravity's worktree.
 
 The initial accepted integration did not change backend runtime behavior. The subsequent CEO-authorized TASK-STAB-005C integration imports only Antigravity's corrections in `src/lib/auth/business-config.ts` and `src/lib/actions/organization.ts`, plus three supporting unit-test files. The frontend, authentication, settings write actions, tenant guard, proxy, validations, migrations, database and live services are preserved. A further verified checkpoint of both worktrees precedes this import; see [corrections integration report](docs/reviews/TASK-STAB-005/CORRECTIONS-INTEGRATION-REPORT.md).
 
@@ -66,3 +67,7 @@ After TASK-STAB-005C integration: **194/194 tests across 13 files**, TypeScript 
 - **Authentication and workflows:** Verify real signup, confirmation, login, recovery, session/cookie behavior across workspace subdomains, organization switching, and Business Settings persistence/permissions.
 
 **Current boundary:** Prior local integration is ACCEPTED; overall TASK-STAB-005 remains IN_PROGRESS. The CEO separately authorized local integration of the two TASK-STAB-005C corrections; that work is now READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED until actually run in an authorized environment. The revised verification proposal remains separate and pending. No commit, push, merge, rebase, deployment, production-service change, worktree deletion, further backend behavior or unrelated work is authorized. Both worktrees and all recovery/report evidence remain preserved.
+
+## Team Management milestone acceptance
+
+On October 14, 2026, the CEO accepted the **TASK-TEAM-001 backend implementation** under DEC-018 and later accepted the **local integration milestone only** under DEC-019. The overall Team Management feature remains **IN_PROGRESS**. Real database and RLS behavior, real authentication, transaction/rollback behavior, and end-to-end employee workflows have not been verified. Invitation acceptance remains disabled; Migration 13 remains unapplied. The enhanced multi-business workspace selector remains deferred under DEC-017. TASK-STAB-005 remains IN_PROGRESS under DEC-016. This local milestone acceptance does not authorize a commit, push, merge, deployment, database change, or another development task.
