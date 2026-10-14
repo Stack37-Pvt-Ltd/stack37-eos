@@ -16,6 +16,7 @@ export function ResetPasswordForm() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [isSuccess, setIsSuccess] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   // Password rules validation
   const rules = {
@@ -30,6 +31,7 @@ export function ResetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
     setErrorMessage(null);
     setFieldErrors({});
 
@@ -44,6 +46,7 @@ export function ResetPasswordForm() {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsLoading(true);
 
     try {
@@ -64,6 +67,7 @@ export function ResetPasswordForm() {
       setErrorMessage('A network error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -71,20 +75,18 @@ export function ResetPasswordForm() {
     return (
       <Card>
         <CardHeader>
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-none bg-blue-50 text-blue-600 border border-blue-100">
             <CheckCircle2 className="h-6 w-6" />
           </div>
-          <CardTitle className="text-center">Password updated</CardTitle>
+          <CardTitle as="h1" className="text-center">Password updated</CardTitle>
           <CardDescription className="text-center">
-            Your password has been securely reset. You can now log in with your new credentials.
+            Sign in with your new password.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Link href="/login" className="block w-full">
-            <Button variant="primary" size="md" className="w-full">
-              Sign In to My Business by STACK37
-            </Button>
-          </Link>
+          <Button asChild variant="primary" size="md" className="w-full"><Link href="/login" className="block w-full">
+              Sign in
+            </Link></Button>
         </CardContent>
       </Card>
     );
@@ -99,13 +101,13 @@ export function ResetPasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Set new password</CardTitle>
+        <CardTitle as="h1">Set new password</CardTitle>
         <CardDescription>
-          Enter your new password below. It must meet standard enterprise security requirements.
+          Choose a strong password.
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} aria-busy={isLoading}>
         <CardContent>
           {errorMessage && (
             <div className="space-y-3 mb-4">
@@ -114,7 +116,7 @@ export function ResetPasswordForm() {
                 <div className="text-center">
                   <Link
                     href="/forgot-password"
-                    className="text-xs text-emerald-600 font-semibold hover:underline"
+                    className="text-xs text-blue-600 font-semibold hover:underline"
                   >
                     Request a new password reset link &rarr;
                   </Link>
@@ -137,27 +139,27 @@ export function ResetPasswordForm() {
           />
 
           {password.length > 0 && (
-            <div className="rounded-lg bg-zinc-50 border border-zinc-200/60 p-3 space-y-1.5 text-xs text-zinc-600">
-              <span className="font-semibold text-zinc-700 block mb-1">Password Requirements:</span>
+            <div className="rounded-none bg-slate-50 border border-slate-200/60 p-3 space-y-1.5 text-xs text-slate-600">
+              <span className="font-semibold text-slate-700 block mb-1">Password requirements</span>
               <div className="grid grid-cols-2 gap-1.5">
-                <div className={`flex items-center gap-1.5 ${rules.length ? 'text-emerald-700 font-medium' : 'text-zinc-500'}`}>
-                  {rules.length ? <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-zinc-400 shrink-0" />}
+                <div className={`flex items-center gap-1.5 ${rules.length ? 'text-blue-700 font-medium' : 'text-slate-500'}`}>
+                  {rules.length ? <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                   <span>8+ characters</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${rules.lower ? 'text-emerald-700 font-medium' : 'text-zinc-500'}`}>
-                  {rules.lower ? <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-zinc-400 shrink-0" />}
+                <div className={`flex items-center gap-1.5 ${rules.lower ? 'text-blue-700 font-medium' : 'text-slate-500'}`}>
+                  {rules.lower ? <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                   <span>Lowercase letter</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${rules.upper ? 'text-emerald-700 font-medium' : 'text-zinc-500'}`}>
-                  {rules.upper ? <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-zinc-400 shrink-0" />}
+                <div className={`flex items-center gap-1.5 ${rules.upper ? 'text-blue-700 font-medium' : 'text-slate-500'}`}>
+                  {rules.upper ? <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                   <span>Uppercase letter</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${rules.number ? 'text-emerald-700 font-medium' : 'text-zinc-500'}`}>
-                  {rules.number ? <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-zinc-400 shrink-0" />}
+                <div className={`flex items-center gap-1.5 ${rules.number ? 'text-blue-700 font-medium' : 'text-slate-500'}`}>
+                  {rules.number ? <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                   <span>Number</span>
                 </div>
-                <div className={`flex items-center gap-1.5 col-span-2 ${rules.special ? 'text-emerald-700 font-medium' : 'text-zinc-500'}`}>
-                  {rules.special ? <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-zinc-400 shrink-0" />}
+                <div className={`flex items-center gap-1.5 col-span-2 ${rules.special ? 'text-blue-700 font-medium' : 'text-slate-500'}`}>
+                  {rules.special ? <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" /> : <X className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                   <span>Special symbol (!@#$%^&*)</span>
                 </div>
               </div>
@@ -178,14 +180,14 @@ export function ResetPasswordForm() {
           />
 
           <Button type="submit" variant="primary" size="md" className="w-full mt-2" isLoading={isLoading}>
-            Update Password
+            Update password
           </Button>
         </CardContent>
 
         <CardFooter className="justify-center">
-          <p className="text-zinc-500 text-xs">
+          <p className="text-slate-500 text-xs">
             Remember your existing password?{' '}
-            <Link href="/login" className="text-emerald-600 font-semibold hover:underline">
+            <Link href="/login" className="text-blue-600 font-semibold hover:underline">
               Sign in
             </Link>
           </p>

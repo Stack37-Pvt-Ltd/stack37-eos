@@ -114,10 +114,11 @@ export async function createBusinessAction(
     };
   }
 
-  // 4. Deterministically resolve the public 'Standard' trial plan
-  // Explicitly query for 'Standard' first so that even if other public plans
-  // (such as Starter or legacy tiers) co-exist in public.plans, the approved
-  // 7-day trial tier is deterministically selected.
+  // 4. Deterministically resolve the required public 'Standard' trial plan
+  // Under approved commercial policy (DEC-006), newly registered organizations receive
+  // an automatic 7-day free trial on the public 'Standard' plan. If the required 'Standard'
+  // plan is unavailable, fail safely with an explicit error rather than selecting another
+  // tier via price-sorting fallback.
   const { data: standardPlan, error: standardPlanError } = await supabase
     .from('plans')
     .select('id, name')
@@ -125,26 +126,14 @@ export async function createBusinessAction(
     .eq('is_public', true)
     .maybeSingle();
 
-  let targetPlan = standardPlan;
-
-  // Fallback to lowest-priced public plan only if 'Standard' is not yet seeded
-  if (!targetPlan && !standardPlanError) {
-    const { data: fallbackPlan } = await supabase
-      .from('plans')
-      .select('id, name')
-      .eq('is_public', true)
-      .order('price', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    targetPlan = fallbackPlan;
-  }
-
-  if (standardPlanError || !targetPlan) {
+  if (standardPlanError || !standardPlan) {
     return {
       success: false,
-      error: 'No public subscription plan is currently configured. Please contact the administrator.',
+      error: 'The required Standard trial subscription plan is currently unavailable. Please contact support.',
     };
   }
+
+  const targetPlan = standardPlan;
 
   // 5. Invoke atomic create_business RPC
   const { data: orgId, error: rpcError } = await supabase.rpc('create_business', {

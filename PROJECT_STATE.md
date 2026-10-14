@@ -1,123 +1,68 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
-**Single Source of Truth for Project Status**  
-**Audience:** Chief Executive Officer, Leadership Team, AI Development Agents  
-**Last Updated:** October 13, 2026 — 21:45 local time  
-**Current Branch:** `feature/phase1-foundation`  
-**Test Suite:** 166 passing / 0 failing (Local automated unit tests)  
+**Last updated:** October 14, 2026 (Asia/Colombo)
+**Branch:** `codex/task-stab-005-integration` (local, based on `d17ed63a48e2313df0f5406d9074f9076b788721`)
+**Committed baseline:** `d17ed63a48e2313df0f5406d9074f9076b788721`
+**Current task:** `TASK-STAB-005` — IN_PROGRESS; prior local integration ACCEPTED, TASK-STAB-005C corrections integrated locally and READY_FOR_REVIEW; real database/authentication verification DEFERRED / NOT EXECUTED
+**Evidence:** Prior CEO-accepted 189-test integration; combined corrections now pass 194 unit tests, TypeScript and ESLint, with mocked browser workflow checks; no commit or deployment
 
 ---
 
-## 1. Executive Summary & Responsibility Model
+## Product and ownership
 
-STACK37 EOS (commercially branded as **"My Business by STACK37"**) has built its multi-tenant foundation, email authentication, workspace provisioning, and foundational business settings. 
+STACK37 EOS is commercially branded **My Business by STACK37**. Antigravity owns backend logic, data, authentication, authorization, migrations, and integrations. Codex owns approved UI/UX and frontend implementation. The CEO owns product scope and approvals, Git synchronization, database operations, and deployment.
 
-All application feature engineering is paused to establish permanent project control and multi-agent governance under **TASK-STAB-001**.
+The approved TASK-STAB-003 visual direction is recorded in [docs/DESIGN_STANDARDS.md](docs/DESIGN_STANDARDS.md) and its full reference in [docs/references/TASK-STAB-003-approved-design.html](docs/references/TASK-STAB-003-approved-design.html).
 
-### Permanent Agent Responsibility Model:
-* **Chief Executive Officer (CEO):** Final Authority (Scope, UI/UX approval, major technical decisions, live DB operations, Git sync, deployments).
-* **ChatGPT:** Product Coordination & Independent Review (Planning, sequencing, report reviews, scope conflict identification, executive reporting).
-* **Google Antigravity:** Backend Engineering Owner (Database, business logic, auth/security, server actions/APIs, billing logic, migrations, backend reliability).
-* **ChatGPT Codex:** UI/UX & Frontend Owner (Product UI/UX design, visual design system, layouts, components, navigation, forms, email visuals, frontend testing).
+## Stabilization sequence
 
----
+| Task | Current recorded status |
+|---|---|
+| TASK-STAB-001 Project control | SYNCHRONIZED in commit `823caab` |
+| TASK-STAB-002 Foundation stabilization | SYNCHRONIZED in commit `d17ed63`; remote migrations were reported verified by Antigravity and not rechecked during this local integration |
+| TASK-STAB-003 Design approval | ACCEPTED by CEO |
+| TASK-STAB-004 Approved UI implementation | ACCEPTED by CEO after final quality gate (October 14, 2026) |
+| TASK-STAB-005A Backend integration readiness | COMPLETED |
+| TASK-STAB-005B Backend safeguards and memory update | ACCEPTED by CEO |
+| TASK-STAB-005C Focused backend corrections | Integrated locally under CEO authorization; READY_FOR_REVIEW with 194 combined unit tests, TypeScript and ESLint passing |
+| TASK-STAB-005 Integrated verification | IN_PROGRESS — local integration phase ACCEPTED by CEO (October 14, 2026); real database, RLS, rollback and authentication verification is DEFERRED / NOT EXECUTED |
 
-## 2. Immediate Sequential Development Priorities
+Future product modules and milestones in [docs/ROADMAP.md](docs/ROADMAP.md) retain their existing scope and status. This snapshot does not authorize new ERP work.
 
-All development proceeds strictly through the following five sequential stabilization phases. **No new ERP modules (Sales, Purchasing, Inventory, Finance) or Team Management features are authorized:**
+## Existing capability evidence
 
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        SEQUENTIAL PRIORITIES                           │
-│                                                                        │
-│  1. Project Control System Stabilization (TASK-STAB-001 — Active)      │
-│     Owner: Antigravity | Review: ChatGPT & CEO                         │
-│                                                                        │
-│  2. Foundation Stabilization (TASK-STAB-002 — Proposed)               │
-│     Owner: Antigravity | Reconcile 3C.3, Migrations 11 & 12, Git Sync │
-│                                                                        │
-│  3. UI/UX Design Approval (TASK-STAB-003 — Proposed)                   │
-│     Owner: Codex & CEO | Official Logo, Navy/Blue/Violet Identity     │
-│                                                                        │
-│  4. Existing Interface Alignment (TASK-STAB-004 — Proposed)            │
-│     Owner: Codex | Align existing screens to approved UI/UX design     │
-│                                                                        │
-│  5. Integrated Verification (TASK-STAB-005 — Proposed)                 │
-│     Owner: Joint (Antigravity + Codex) | End-to-end regression audit   │
-└────────────────────────────────────────────────────────────────────────┘
-```
+The committed backend baseline contains authentication, email confirmation/recovery, subdomain tenant routing, business registration/provisioning, trial creation, and business settings actions. The handoff asserts migrations 01–12 are applied remotely; this task did not connect to Supabase or independently verify the remote schema.
 
----
+TASK-STAB-004 adds a local visual implementation for existing workflows. It preserves server actions and the database boundary. Settings and authenticated workflow checks were exercised in local browser previews using mocked data/actions. These previews are not production end-to-end proof. The public application has not been inspected or deployed by this task.
 
-## 3. Customer Capabilities & Evidence Classification
+Independent VAT and SSCL settings, team management, ERP operations, subscription checkout, and trial-expiry enforcement remain outside this implementation and are not represented as completed.
 
-To ensure complete transparency, capabilities are categorized by verified technical evidence:
-- **Committed Code:** Merged into Git on branch `feature/phase1-foundation`.
-- **Locally Tested Functionality:** Built in local working directory; passes automated unit tests and browser checks.
-- **Deployed Database Migrations:** Successfully applied to remote Supabase database (`xbiadendaxhoyrcvaybf`).
-- **Publicly Deployed Application:** Live on public production hosting (e.g., Vercel).
-- **CEO-Accepted Functionality:** Formally reviewed, verified, and accepted by executive leadership.
+## Current working tree
 
-| Capability / Workflow | Customer Journey | Technical Evidence Classification | Domain Owner |
-| :--- | :--- | :--- | :--- |
-| **Email Registration & Login** | Self-service signup and authentication with work email and password. | **Committed Code** (Commit `344bcab`), **Deployed DB Migrations** (01–07), **Locally Tested** (100% tests pass). | Backend (Antigravity) |
-| **Scanner-Proof Email Confirmation** | Click confirmation link; intermediate screen prevents premature link consumption by email scanners. | **Committed Code** (Commit `344bcab`), **Locally Tested** in browser and test suite. | Backend (Antigravity) / UI (Codex) |
-| **Password Recovery** | 15-minute cryptographically signed, user-bound password reset token. | **Committed Code** (Commit `d08514e`), **Locally Tested** (Test: `recovery-auth.test.ts`). | Backend (Antigravity) |
-| **Multi-Tenant Workspace Routing** | Subdomain host proxy isolates workspaces at `[tenant-slug].domain.com`. | **Committed Code** (Commit `b4b88b6`), **Locally Tested** (Test: `proxy-routing.test.ts`). | Backend (Antigravity) |
-| **Cross-Tenant Organization Switcher** | Multi-tenant users can select or switch workspaces at `/select-organization`. | **Committed Code** (Commit `d08514e`), **Locally Tested**. | Backend (Antigravity) / UI (Codex) |
-| **Atomic Business Onboarding** | Creates organization, binds sole Primary Owner, provisions HQ branch, assigns Admin role, and sets 7-day trial. | **Committed Code** (Commit `7f88f2c`), **Deployed DB Migrations** (08–10, 12), **Locally Tested**. | Backend (Antigravity) |
-| **Sole Ownership Guard** | Exactly one active Primary Owner per organization enforced by database constraints. | **Committed Code** (Commit `d4b6b2c`), **Deployed DB Migrations** (03, 10). | Backend (Antigravity) |
-| **Business Setup & Headquarters Details** | Primary Owner configures trading name, legal name, BRN, contact info, address, currency, timezone, and HQ branch. | **Locally Tested Functionality** (Uncommitted local code), **Deployed DB Migrations** (11, 12). *Awaiting Foundation Stabilization & Git sync.* | Backend (Antigravity) / UI (Codex) |
-| **General Tax Status & Tax ID** | Capture single Tax ID (TIN) and general tax classification dropdown (`standard`, `vat_registered`, `exempt`, `simplified`). | **Locally Tested Functionality** (Uncommitted local code), **Deployed DB Migrations** (11). | Backend (Antigravity) |
-| **Independent VAT & SSCL Registration Controls** | Separate, independent business settings for VAT registration and SSCL registration. | **INCOMPLETE / UNBUILT.** (General dropdown does NOT satisfy this requirement). | Backend (Antigravity) / UI (Codex) |
-| **Team Management & Staff Invitations** | Invite employees by email, assign Admin/Member roles, bind to operating branches. | **INCOMPLETE / UNBUILT.** (Blocked on Priorities 1–5). | Backend (Antigravity) / UI (Codex) |
-| **Connected Sales, Purchasing, Inventory, Finance** | Core business operations. | **INCOMPLETE / UNBUILT.** (Blocked on Priorities 1–5). | Backend (Antigravity) / UI (Codex) |
-| **Subscription Checkout & Trial Expiry Locking** | Paid gateway checkout and automated trial expiration lock before public launch. | **INCOMPLETE / UNBUILT.** (Mandatory Pre-Launch requirement). | Backend (Antigravity) / UI (Codex) |
+Changes are local and uncommitted on `codex/task-stab-005-integration`; baseline `d17ed63a48e2313df0f5406d9074f9076b788721` is unchanged. Separate verified file snapshots of TASK-STAB-004 and TASK-STAB-005B were created under `%TEMP%\STACK37-EOS-TASK-STAB-005-checkpoint-d75b476588e94232a867fceac526991e`; manifests and SHA-256 hashes are recorded in the TASK-STAB-005 integration report. The UI implementation is preserved. The 19 backend safeguard unit tests and checkpointed Version 1.0 verification plan are present in the main project. Four shared governance files were reconciled manually. Codex did not write to Antigravity's worktree. Its revised Version 2.0 plan remains a separate pending proposal at `.worktrees/backend-safeguards/docs/verification/TASK-STAB-005_backend_verification_plan.md`, as directed by the CEO; it has not replaced the integrated Version 1.0 or received execution authorization in this task.
 
----
+The initial accepted integration did not change backend runtime behavior. The subsequent CEO-authorized TASK-STAB-005C integration imports only Antigravity's corrections in `src/lib/auth/business-config.ts` and `src/lib/actions/organization.ts`, plus three supporting unit-test files. The frontend, authentication, settings write actions, tenant guard, proxy, validations, migrations, database and live services are preserved. A further verified checkpoint of both worktrees precedes this import; see [corrections integration report](docs/reviews/TASK-STAB-005/CORRECTIONS-INTEGRATION-REPORT.md).
 
-## 4. Current Working Tree & Environment State
+## Verification
 
-### Git Working Tree Status (`feature/phase1-foundation`):
-- **16 commits** pushed and synchronized on remote through commit `eb4c9b6` (Phase 3C.2).
-- **Phase 3C.3 work is implemented locally and fully preserved**, awaiting Foundation Stabilization authorization (`TASK-STAB-002`):
-  - **Modified Files (5):**
-    - `src/app/tenant/[tenantSlug]/layout.tsx` (adds Settings navigation link)
-    - `src/app/tenant/[tenantSlug]/page.tsx` (adds Quick Action button to Settings)
-    - `src/lib/actions/organization.ts` (adds server actions for business & branch settings)
-    - `src/lib/validations/organization.ts` (adds validation schemas for entity & branch metadata)
-    - `tests/unit/workspace-provisioning.test.ts` (adds assertions for role flags)
-  - **Untracked Files (6):**
-    - `src/app/tenant/[tenantSlug]/settings/page.tsx` (Settings page)
-    - `src/components/tenant/business-configuration-form.tsx` (Settings form component)
-    - `src/lib/auth/business-config.ts` (Server-side resolver for organization & HQ data)
-    - `supabase/migrations/20261010000011_11_business_setup_and_configuration.sql` (Migration 11)
-    - `supabase/migrations/20261010000012_12_headquarters_provisioning_fix.sql` (Migration 12)
-    - `tests/unit/business-configuration.test.ts` (Unit tests for settings form & validation)
+The CEO accepted the TASK-STAB-005 local integration phase on October 14, 2026: **189/189 unit tests across 13 files**, TypeScript, ESLint, production build, and `git diff --check` passed. Results and recovery evidence are preserved in [docs/reviews/TASK-STAB-005/INTEGRATION-REPORT.md](docs/reviews/TASK-STAB-005/INTEGRATION-REPORT.md). This acceptance does not complete the overall task or establish real database/authentication behavior.
 
-### Database State (Supabase Project `xbiadendaxhoyrcvaybf`):
-- Migrations 11 and 12 deployed to remote Supabase under CEO authorization.
-- Remote database schema is verified intact with zero regressions.
+Prior TASK-STAB-004 checks included 170 unit tests, TypeScript, ESLint, production build, frontend interaction/layout fixtures, and browser review at 375px and 1440px. Its evidence remains in [docs/reviews/TASK-STAB-004/REPORT.md](docs/reviews/TASK-STAB-004/REPORT.md) and [docs/reviews/TASK-STAB-004/FINAL-QUALITY-GATE.md](docs/reviews/TASK-STAB-004/FINAL-QUALITY-GATE.md).
 
----
+After TASK-STAB-005C integration: **194/194 tests across 13 files**, TypeScript and ESLint pass. Registration success/error and Settings/Headquarters owner/readonly interactions were verified in the existing isolated browser fixture with mocked actions. These checks do not prove persistence, provisioning transactions or real sessions. The production build was not rerun for this correction task; the earlier successful build is historical evidence. Database-dependent security and authentication tests remain **DEFERRED / NOT EXECUTED**.
 
-## 5. Active Task Status & Next Steps
+## Backend correction status and remaining hardening
 
-* **Current Active Task:** `TASK-STAB-001` (Project Control System & Agent Responsibility Policy).
-* **Next Steps (Awaiting CEO Review & Authorization):**
-  1. CEO review of updated governance and responsibility model.
-  2. Authorization of `TASK-STAB-002` (Foundation Stabilization).
-  3. Authorization of `TASK-STAB-003` (UI/UX Design Approval).
+- **Business Settings default and organization binding — IMPLEMENTED_LOCAL:** `canEdit` now defaults to false. The supplied membership must match the requested organization, be active and be Primary Owner. The current Settings route supplies its verified membership ID; write actions retain their independent owner checks. These two former deferred caveats are addressed by the imported correction.
+- **Authenticated user binding — remaining verification:** The resolver does not add a direct `user_id` predicate or independent session lookup. The existing tenant guard, session client and RLS remain responsible for caller binding; real user/session/RLS verification is blocked. The broader proposed hardening in the separate revised plan is not implemented by this import.
+- **Standard plan resolution — IMPLEMENTED_LOCAL:** Registration now returns an explicit failure before provisioning if the public Standard plan is missing or its lookup errors. It no longer selects an arbitrary price-sorted plan. Available Standard retains the existing seven-day trial workflow. Real plan configuration, trial persistence, entitlements and expiry remain unverified here.
 
----
+## Remaining verification gates
 
-## 6. Authoritative Project Records
+- **Authorization:** Verify real active-owner, non-owner, suspended-member, cross-organization, and authenticated-user boundaries. The default and organization-binding corrections pass mocked tests; real caller binding and database enforcement remain unverified.
+- **Subscriptions:** Confirm the configured Standard trial plan, seven-day trial creation, displayed subscription status, and actual entitlements against approved policy. The arbitrary fallback is removed; trial-expiry enforcement is not established by local integration.
+- **RLS:** Verify real PostgreSQL isolation for organization, branch, settings, and audit data using an explicitly authorized isolated environment.
+- **Transactions:** Verify atomic organization/Headquarters/membership/subscription provisioning, rollback on failure, and database constraints without partial records.
+- **Authentication and workflows:** Verify real signup, confirmation, login, recovery, session/cookie behavior across workspace subdomains, organization switching, and Business Settings persistence/permissions.
 
-- [AI Operating Rules & Responsibility Policy (AGENTS.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/AGENTS.md)
-- [Product Scope & Vision (docs/PRODUCT_SCOPE.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/PRODUCT_SCOPE.md)
-- [Feature Register (docs/FEATURES.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/FEATURES.md)
-- [Development Roadmap (docs/ROADMAP.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/ROADMAP.md)
-- [Master Roadmap Blueprint PDF (docs/references/STACK37_EOS_Development_Master_Roadmap_v1.pdf)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/references/STACK37_EOS_Development_Master_Roadmap_v1.pdf)
-- [Decision Register (docs/DECISIONS.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/DECISIONS.md)
-- [Task Register & Task Histories (docs/TASKS.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/TASKS.md)
-- [Design Standards (docs/DESIGN_STANDARDS.md)](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/DESIGN_STANDARDS.md)
+**Current boundary:** Prior local integration is ACCEPTED; overall TASK-STAB-005 remains IN_PROGRESS. The CEO separately authorized local integration of the two TASK-STAB-005C corrections; that work is now READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED until actually run in an authorized environment. The revised verification proposal remains separate and pending. No commit, push, merge, rebase, deployment, production-service change, worktree deletion, further backend behavior or unrelated work is authorized. Both worktrees and all recovery/report evidence remain preserved.

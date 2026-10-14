@@ -79,7 +79,7 @@ describe('createBusinessAction Server Action', () => {
     expect(mockGetUser).not.toHaveBeenCalled();
   });
 
-  it('rejects registration when no public subscription plan is configured', async () => {
+  it('rejects registration when required Standard subscription plan is unavailable', async () => {
     mockGetUser.mockResolvedValue({
       data: { user: { id: 'user-123', email: 'owner@acme.com' } },
       error: null,
@@ -109,7 +109,52 @@ describe('createBusinessAction Server Action', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('No public subscription plan is currently configured');
+    expect(result.error).toContain('The required Standard trial subscription plan is currently unavailable');
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it('fails safely and does not fallback to other public plans when Standard plan is missing', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: 'user-123', email: 'owner@acme.com' } },
+      error: null,
+    });
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'organizations') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'plans') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockImplementation((col: string, val: string) => {
+              const innerBuilder: Record<string, unknown> = {};
+              innerBuilder.eq = vi.fn().mockReturnValue(innerBuilder);
+              innerBuilder.maybeSingle = vi.fn().mockResolvedValue({
+                data: val === 'Standard' ? null : { id: 'plan-starter-uuid', name: 'Starter' },
+                error: null,
+              });
+              return innerBuilder;
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    const result = await createBusinessAction({
+      name: 'Acme Logistics',
+      slug: 'acme-logistics',
+      countryCode: 'US',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('The required Standard trial subscription plan is currently unavailable');
     expect(mockRpc).not.toHaveBeenCalled();
   });
 

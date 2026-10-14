@@ -1,0 +1,9 @@
+Reset your password
+
+Use the link below to reset your password.
+
+Reset password: {{ACTION_URL}}
+
+After confirmation, your reset session lasts 15 minutes. Didn’t request a reset? Ignore this email.
+
+My Business by STACK37

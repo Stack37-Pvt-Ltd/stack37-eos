@@ -25,9 +25,12 @@ export function LoginForm() {
       : null
   );
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const isSubmittingRef = React.useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setErrorMessage(null);
     setFieldErrors({});
     setIsLoading(true);
@@ -48,19 +51,20 @@ export function LoginForm() {
       setErrorMessage('A network error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sign in to your account</CardTitle>
+        <CardTitle as="h1">Sign in</CardTitle>
         <CardDescription>
-          Enter your credentials to access your organization workspace.
+          Access your workspace.
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} aria-busy={isLoading}>
         <CardContent>
           {errorMessage && (
             <Alert variant="error" className="mb-4">
@@ -70,7 +74,7 @@ export function LoginForm() {
 
           <Input
             id="email"
-            label="Work Email"
+            label="Work email"
             type="email"
             autoComplete="email"
             placeholder="name@company.com"
@@ -85,13 +89,13 @@ export function LoginForm() {
             <div className="flex items-center justify-between">
               <label
                 htmlFor="password"
-                className="block text-xs font-semibold uppercase tracking-wider text-zinc-700"
+                className="block text-sm font-medium text-slate-700"
               >
                 Password
               </label>
               <Link
                 href="/forgot-password"
-                className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline"
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline"
               >
                 Forgot password?
               </Link>
@@ -110,14 +114,14 @@ export function LoginForm() {
           </div>
 
           <Button type="submit" variant="primary" size="md" className="w-full mt-2" isLoading={isLoading}>
-            Sign In
+            Sign in
           </Button>
         </CardContent>
 
         <CardFooter className="justify-center">
-          <p className="text-zinc-500 text-xs">
-            New to My Business by STACK37?{' '}
-            <Link href="/register" className="text-emerald-600 font-semibold hover:underline">
+          <p className="text-slate-500 text-xs">
+            New to My Business?{' '}
+            <Link href="/register" className="text-blue-600 font-semibold hover:underline">
               Create an account
             </Link>
           </p>

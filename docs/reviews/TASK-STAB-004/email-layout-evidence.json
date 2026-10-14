@@ -1,0 +1,28 @@
+[
+  {
+    "kind": "confirmation",
+    "size": "desktop",
+    "overflow": false,
+    "text": "\n\nConfirm your email\n\nConfirm your email to finish setting up My Business.\n\nConfirm email →\n\nYou’ll confirm on the next page. Didn’t create this account? Ignore this email.\n\n\nMy Business by STACK37",
+    "width": 1440
+  },
+  {
+    "kind": "recovery",
+    "size": "desktop",
+    "overflow": false,
+    "text": "\n\nReset your password\n\nUse the link below to reset your password.\n\nReset password →\n\nAfter confirmation, your reset session lasts 15 minutes. Didn’t request a reset? Ignore this email.\n\n\nMy Business by STACK37",
+    "width": 1440
+  },
+  {
+    "kind": "confirmation",
+    "size": "mobile",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "kind": "recovery",
+    "size": "mobile",
+    "overflow": false,
+    "width": 375
+  }
+]

@@ -20,6 +20,8 @@ export function OrganizationSwitcher({
 }: OrganizationSwitcherProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const panelId = React.useId();
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -29,32 +31,43 @@ export function OrganizationSwitcher({
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && containerRef.current?.contains(document.activeElement)) {
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
 
   return (
     <div className="relative inline-block text-left" ref={containerRef}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-zinc-200/80 bg-white hover:bg-zinc-50 text-xs font-semibold text-zinc-800 shadow-2xs transition-colors"
+        className="flex min-h-11 max-w-full items-center gap-2.5 border border-brand-line bg-white px-3 text-sm text-brand-navy hover:bg-slate-50"
         aria-expanded={isOpen}
-        aria-haspopup="true"
+        aria-controls={panelId}
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-bold text-[10px]">
+        <span className="flex h-5 w-5 items-center justify-center rounded-none bg-blue-50 text-blue-700 border border-blue-200/60 font-bold text-[10px]">
           {currentOrgName.slice(0, 2).toUpperCase()}
         </span>
-        <span className="truncate max-w-[140px] font-medium">{currentOrgName}</span>
-        <ChevronsUpDown className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+        <span className="truncate max-w-[220px] font-medium">{currentOrgName}</span>
+        <ChevronsUpDown className="h-3.5 w-3.5 text-slate-500 shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 w-64 rounded-xl border border-zinc-200 bg-white shadow-lg ring-1 ring-black/5 z-50 py-1.5 focus:outline-none">
-          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+        <div id={panelId} className="absolute left-0 z-50 mt-1 w-72 max-w-[calc(100vw-40px)] border border-brand-line bg-white py-2 shadow-lg" aria-label="Workspaces">
+          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
             Workspaces ({organizations.length})
           </div>
 
-          <div className="max-h-60 overflow-y-auto divide-y divide-zinc-100">
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
             {organizations.map((org) => {
               const isCurrent = org.slug === currentSlug;
               const targetUrl = getTenantWorkspaceUrl(org.slug, currentHost);
@@ -63,38 +76,38 @@ export function OrganizationSwitcher({
                 <a
                   key={org.id}
                   href={targetUrl}
-                  className={`flex items-center justify-between px-3 py-2 text-xs hover:bg-zinc-50 transition-colors ${
-                    isCurrent ? 'bg-emerald-50/50 text-emerald-900 font-semibold' : 'text-zinc-700'
+                  className={`flex min-h-11 items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                    isCurrent ? 'bg-blue-50/50 text-blue-900 font-semibold' : 'text-slate-700'
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <Building2
                       className={`h-4 w-4 shrink-0 ${
-                        isCurrent ? 'text-emerald-600' : 'text-zinc-400'
+                        isCurrent ? 'text-blue-600' : 'text-slate-500'
                       }`}
                     />
                     <div className="min-w-0">
                       <p className="truncate font-medium">{org.name}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{org.slug}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{org.slug}</p>
                     </div>
                   </div>
                   {isCurrent ? (
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0 ml-2" />
+                    <Check className="h-4 w-4 text-blue-600 shrink-0 ml-2" />
                   ) : (
-                    <ExternalLink className="h-3 w-3 text-zinc-400 shrink-0 ml-2" />
+                    <ExternalLink className="h-3 w-3 text-slate-500 shrink-0 ml-2" />
                   )}
                 </a>
               );
             })}
           </div>
 
-          <div className="border-t border-zinc-100 mt-1 pt-1 px-1">
+          <div className="border-t border-slate-100 mt-1 pt-1 px-1">
             <Link
               href="/select-organization"
-              className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 rounded-lg transition-colors"
+              className="flex min-h-11 items-center gap-2 px-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50"
               onClick={() => setIsOpen(false)}
             >
-              <Plus className="h-3.5 w-3.5 text-zinc-400" />
+              <Plus className="h-3.5 w-3.5 text-slate-500" />
               <span>Workspace Directory</span>
             </Link>
           </div>

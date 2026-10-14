@@ -210,7 +210,7 @@ describe('Phase 3C.3: Business Setup & Configuration (Mocked Unit Tests)', () =>
         postal_code: '00100',
       };
 
-      const mockMember = { is_owner: true, status: 'active' };
+      const mockMember = { is_owner: true, status: 'active', organization_id: orgId };
 
       mockFrom.mockImplementation((table: string) => {
         if (table === 'organizations') {
@@ -247,12 +247,11 @@ describe('Phase 3C.3: Business Setup & Configuration (Mocked Unit Tests)', () =>
           };
         }
         if (table === 'organization_members') {
+          const memQuery: Record<string, unknown> = {};
+          memQuery.eq = vi.fn().mockReturnValue(memQuery);
+          memQuery.maybeSingle = vi.fn().mockResolvedValue({ data: mockMember, error: null });
           return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                maybeSingle: vi.fn().mockResolvedValue({ data: mockMember, error: null }),
-              }),
-            }),
+            select: vi.fn().mockReturnValue(memQuery),
           };
         }
         if (table === 'business_categories') {
@@ -314,12 +313,14 @@ describe('Phase 3C.3: Business Setup & Configuration (Mocked Unit Tests)', () =>
           };
         }
         if (table === 'organization_members') {
+          const memQuery: Record<string, unknown> = {};
+          memQuery.eq = vi.fn().mockReturnValue(memQuery);
+          memQuery.maybeSingle = vi.fn().mockResolvedValue({
+            data: { is_owner: true, status: 'active', organization_id: orgId },
+            error: null,
+          });
           return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                maybeSingle: vi.fn().mockResolvedValue({ data: { is_owner: true }, error: null }),
-              }),
-            }),
+            select: vi.fn().mockReturnValue(memQuery),
           };
         }
         if (table === 'business_categories') {

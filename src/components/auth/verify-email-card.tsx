@@ -14,15 +14,15 @@ export function VerifyEmailCard() {
   return (
     <Card>
       <CardHeader>
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-none bg-blue-50 text-blue-600 border border-blue-100">
           <Mail className="h-6 w-6" />
         </div>
-        <CardTitle className="text-center">Verify your email</CardTitle>
+        <CardTitle as="h1" className="text-center">Verify your email</CardTitle>
         <CardDescription className="text-center">
           {email ? (
             <>
               We sent a confirmation link to{' '}
-              <span className="font-semibold text-zinc-900">{email}</span>
+              <span className="font-semibold text-slate-900">{email}</span>
             </>
           ) : (
             'We sent a confirmation link to your registered work email.'
@@ -31,29 +31,27 @@ export function VerifyEmailCard() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="rounded-lg bg-zinc-50 border border-zinc-200/60 p-4 text-xs text-zinc-600 space-y-2">
+        <div className="rounded-none bg-slate-50 border border-slate-200/60 p-4 text-xs text-slate-600 space-y-2">
           <div className="flex items-start gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+            <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              Email verification is required before your account can access organization workspaces.
+              Confirm your email to access your workspaces.
             </p>
           </div>
-          <p className="text-zinc-500 pl-6 leading-relaxed">
-            Please click the confirmation link in the email to activate your account. If you don&apos;t see the message within a few minutes, check your spam or junk folder.
+          <p className="text-slate-500 pl-6 leading-relaxed">
+            Open the link in your email, then confirm. Check your spam folder if it hasn’t arrived.
           </p>
         </div>
 
-        <Link href="/login" className="block w-full">
-          <Button variant="primary" size="md" className="w-full">
-            Proceed to Sign In
-          </Button>
-        </Link>
+        <Button asChild variant="primary" size="md" className="w-full"><Link href="/login" className="block w-full">
+            Sign in
+          </Link></Button>
       </CardContent>
 
       <CardFooter className="justify-center">
         <Link
           href="/login"
-          className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-800 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Back to sign in</span>

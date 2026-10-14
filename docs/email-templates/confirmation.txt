@@ -1,0 +1,9 @@
+Confirm your email
+
+Confirm your email to finish setting up My Business.
+
+Confirm email: {{ACTION_URL}}
+
+You’ll confirm on the next page. Didn’t create this account? Ignore this email.
+
+My Business by STACK37

@@ -15,11 +15,14 @@ export function ForgotPasswordForm() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [isSubmitted, setIsSubmitted] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
     setErrorMessage(null);
     setFieldErrors({});
+    isSubmittingRef.current = true;
     setIsLoading(true);
 
     try {
@@ -36,6 +39,7 @@ export function ForgotPasswordForm() {
       setErrorMessage('A network error occurred. Please try again.');
     } finally {
       setIsLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -43,23 +47,21 @@ export function ForgotPasswordForm() {
     return (
       <Card>
         <CardHeader>
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-none bg-blue-50 text-blue-600 border border-blue-100">
             <MailCheck className="h-6 w-6" />
           </div>
-          <CardTitle className="text-center">Check your inbox</CardTitle>
+          <CardTitle as="h1" className="text-center">Check your inbox</CardTitle>
           <CardDescription className="text-center">
-            If an account is registered with <span className="font-semibold text-zinc-800">{email}</span>, we have sent instructions to reset your password.
+            If an account is registered with <span className="font-semibold text-slate-800">{email}</span>, we have sent instructions to reset your password.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-xs text-zinc-500 text-center leading-relaxed">
-            The recovery link will expire shortly for security. Be sure to check your spam or junk folder if you don&apos;t see it in a few moments.
+          <p className="text-xs text-slate-500 text-center leading-relaxed">
+            Check your spam folder if the email hasn’t arrived.
           </p>
-          <Link href="/login" className="block w-full">
-            <Button variant="secondary" size="md" className="w-full">
-              Return to Sign In
-            </Button>
-          </Link>
+          <Button asChild variant="secondary" size="md" className="w-full"><Link href="/login" className="block w-full">
+              Back to sign in
+            </Link></Button>
         </CardContent>
       </Card>
     );
@@ -68,13 +70,13 @@ export function ForgotPasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Reset your password</CardTitle>
+        <CardTitle as="h1">Reset your password</CardTitle>
         <CardDescription>
-          Enter the work email associated with your account and we&apos;ll send you a password recovery link.
+          We’ll email you a reset link.
         </CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} aria-busy={isLoading}>
         <CardContent>
           {errorMessage && (
             <Alert variant="error" className="mb-4">
@@ -84,7 +86,7 @@ export function ForgotPasswordForm() {
 
           <Input
             id="email"
-            label="Work Email"
+            label="Work email"
             type="email"
             autoComplete="email"
             placeholder="name@company.com"
@@ -96,14 +98,14 @@ export function ForgotPasswordForm() {
           />
 
           <Button type="submit" variant="primary" size="md" className="w-full mt-2" isLoading={isLoading}>
-            Send Recovery Link
+            Send reset link
           </Button>
         </CardContent>
 
         <CardFooter className="justify-center">
-          <p className="text-zinc-500 text-xs">
+          <p className="text-slate-500 text-xs">
             Remember your password?{' '}
-            <Link href="/login" className="text-emerald-600 font-semibold hover:underline">
+            <Link href="/login" className="text-blue-600 font-semibold hover:underline">
               Sign in
             </Link>
           </p>

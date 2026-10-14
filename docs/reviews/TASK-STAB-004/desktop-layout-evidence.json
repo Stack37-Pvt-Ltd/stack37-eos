@@ -1,0 +1,68 @@
+[
+  {
+    "screen": "login",
+    "heading": "Sign in",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "register",
+    "heading": "Create your account",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "forgot",
+    "heading": "Reset your password",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "reset",
+    "heading": "Set new password",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "verify",
+    "heading": "Verify your email",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "confirm",
+    "heading": "Invalid link",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "registration",
+    "heading": "Register your business",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "directory",
+    "heading": "Choose a workspace",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "overview",
+    "heading": "Serendib Supply Company",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "settings",
+    "heading": "Business settings",
+    "overflow": false,
+    "width": 1440
+  },
+  {
+    "screen": "denied",
+    "heading": "Access Restricted",
+    "overflow": false,
+    "width": 1440
+  }
+]

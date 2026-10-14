@@ -183,15 +183,21 @@ export async function getBusinessConfiguration(
     isOwnerAssigned = !!memBranch;
   }
 
-  // 4. Determine user edit capability (strictly active primary owner)
-  let canEdit = true;
+  // 4. Determine user edit capability (strictly active primary owner belonging to this organization)
+  let canEdit = false;
   if (userMembershipId) {
     const { data: member } = await supabase
       .from('organization_members')
-      .select('is_owner, status')
+      .select('is_owner, status, organization_id')
+      .eq('organization_id', organizationId)
       .eq('id', userMembershipId)
       .maybeSingle();
-    canEdit = Boolean(member?.is_owner === true && member?.status === 'active');
+    canEdit = Boolean(
+      member &&
+      member.organization_id === organizationId &&
+      member.is_owner === true &&
+      member.status === 'active'
+    );
   }
 
   // 5. Fetch Business Categories from database or fallback to curated list

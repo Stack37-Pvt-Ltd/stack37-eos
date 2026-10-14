@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '../../lib/supabase/server';
-import { AuthShell } from '../../components/auth/auth-shell';
+import { RegistrationShell } from '../../components/organization/registration-shell';
 import { RegistrationForm } from '../../components/organization/registration-form';
 
 export const dynamic = 'force-dynamic';
@@ -20,8 +20,8 @@ export default async function RegistrationPage() {
   }
 
   return (
-    <AuthShell>
+    <RegistrationShell email={user.email}>
       <RegistrationForm userEmail={user.email} />
-    </AuthShell>
+    </RegistrationShell>
   );
 }

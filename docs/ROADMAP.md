@@ -15,10 +15,10 @@ To ensure rigorous execution and prevent technical debt, development proceeds st
 ```mermaid
 graph TD
     subgraph "Immediate Stabilization Era (Current Focus)"
-        P1["Priority 1: Project Control Setup<br/>(TASK-STAB-001 — Active)"]
-        --> P2["Priority 2: Foundation Stabilization<br/>(TASK-STAB-002 — Proposed)"]
-        --> P3["Priority 3: UI/UX Design Approval<br/>(TASK-STAB-003 — Proposed)"]
-        --> P4["Priority 4: Existing Interface Alignment<br/>(TASK-STAB-004 — Proposed)"]
+        P1["Priority 1: Project Control Setup<br/>(TASK-STAB-001 — Ready for review)"]
+        --> P2["Priority 2: Foundation Stabilization<br/>(TASK-STAB-002 — In progress per task register)"]
+        --> P3["Priority 3: UI/UX Design Approval<br/>(TASK-STAB-003 — Accepted)"]
+        --> P4["Priority 4: Existing Interface Alignment<br/>(TASK-STAB-004 — Ready for review)"]
         --> P5["Priority 5: Integrated Verification<br/>(TASK-STAB-005 — Proposed)"]
     end
 
@@ -55,11 +55,11 @@ graph TD
 * **Owner:** Google Antigravity (Backend Owner)
 * **Scope:** Reconcile Phase 3C.3 uncommitted files, verify remote migrations 11 & 12, run complete test regression suites, and perform CEO-authorized Git commit.
 
-### Priority 3: UI/UX Design Approval *(PROPOSED — TASK-STAB-003)*
+### Priority 3: UI/UX Design Approval *(ACCEPTED — TASK-STAB-003)*
 * **Owner:** ChatGPT Codex (Frontend/UI Owner) & CEO
 * **Scope:** Review and approve corporate visual identity, official STACK37 logo, navy typography, blue/violet palette, layout navigation, and eliminate placeholder elements.
 
-### Priority 4: Existing Interface Alignment *(PROPOSED — TASK-STAB-004)*
+### Priority 4: Existing Interface Alignment *(READY FOR REVIEW — TASK-STAB-004)*
 * **Owner:** ChatGPT Codex (Frontend/UI Owner)
 * **Scope:** Align existing authentication, layout, dashboard, and settings screens to the approved UI/UX design.
 

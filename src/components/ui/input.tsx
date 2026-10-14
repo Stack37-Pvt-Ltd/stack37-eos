@@ -18,7 +18,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="block text-xs font-semibold uppercase tracking-wider text-zinc-700"
+            className="block text-sm font-medium text-slate-700"
           >
             {label}
           </label>
@@ -29,10 +29,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
-            className={`flex h-10 w-full rounded-lg border bg-white px-3.5 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 transition-colors focus:outline-none disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400 ${
+            className={`flex min-h-11 w-full rounded-none border bg-white px-3 py-2 text-sm text-brand-navy placeholder:text-slate-500 transition-colors focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 ${
               error
                 ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
-                : 'border-zinc-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20'
+                : 'border-slate-300 focus:border-brand-blue focus:ring-2 focus:ring-blue-600/15'
             } ${className}`.trim()}
             {...props}
           />

@@ -72,13 +72,16 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const isSavingBusinessRef = React.useRef(false);
+  const isSavingBranchRef = React.useRef(false);
 
   const canEdit = initialData.canEdit;
 
   async function handleSaveBusiness(e: React.FormEvent) {
     e.preventDefault();
-    if (!canEdit) return;
+    if (!canEdit || isSavingBusinessRef.current) return;
 
+    isSavingBusinessRef.current = true;
     setIsSaving(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -112,19 +115,21 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
           setFieldErrors(result.fieldErrors);
         }
       } else {
-        setSuccessMessage('Business configuration saved successfully.');
+        setSuccessMessage('Business settings saved.');
       }
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setIsSaving(false);
+      isSavingBusinessRef.current = false;
     }
   }
 
   async function handleSaveBranch(e: React.FormEvent) {
     e.preventDefault();
-    if (!canEdit || !initialData.headquartersBranch?.id) return;
+    if (!canEdit || !initialData.headquartersBranch?.id || isSavingBranchRef.current) return;
 
+    isSavingBranchRef.current = true;
     setIsSavingBranch(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -151,25 +156,26 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
           setFieldErrors(result.fieldErrors);
         }
       } else {
-        setSuccessMessage('Headquarters branch updated successfully.');
+        setSuccessMessage('Headquarters saved.');
       }
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'An unexpected error occurred.');
     } finally {
       setIsSavingBranch(false);
+      isSavingBranchRef.current = false;
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="settings-form space-y-6">
       {/* Read-only Advisory Banner */}
       {!canEdit && (
-        <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-4 flex items-start gap-3">
+        <div className="bg-amber-50/80 border border-amber-200/80 rounded-none p-4 flex items-start gap-3">
           <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-xs text-amber-800">
             <p className="font-semibold">Read-Only View</p>
             <p className="mt-0.5 text-amber-700">
-              Only the active Primary Owner can update business entity configuration, currency standards, tax registration, and operating branch details.
+              You are viewing business settings in read-only mode. Only the Primary Owner can make modifications.
             </p>
           </div>
         </div>
@@ -177,15 +183,15 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
       {/* Global Alerts */}
       {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between text-xs text-emerald-800 animate-in fade-in duration-200">
+        <div role="status" className="bg-blue-50 border border-blue-200 rounded-none p-4 flex items-center justify-between text-xs text-blue-800 animate-in fade-in duration-200">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
             <span className="font-medium">{successMessage}</span>
           </div>
           <button
             type="button"
             onClick={() => setSuccessMessage(null)}
-            className="text-emerald-600 hover:text-emerald-800 text-[11px] font-semibold"
+            className="text-blue-600 hover:text-blue-800 text-[11px] font-semibold"
           >
             Dismiss
           </button>
@@ -193,7 +199,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
       )}
 
       {errorMessage && (
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 flex items-center justify-between text-xs text-rose-800 animate-in fade-in duration-200">
+        <div role="alert" className="bg-rose-50 border border-rose-200 rounded-none p-4 flex items-center justify-between text-xs text-rose-800 animate-in fade-in duration-200">
           <div className="flex items-center gap-2.5">
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
             <span className="font-medium">{errorMessage}</span>
@@ -209,78 +215,92 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
       )}
 
       {/* Segmented Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-100/80 border border-zinc-200/80 rounded-xl">
+      {Object.keys(fieldErrors).length > 0 && (
+        <div role="alert" className="border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="font-semibold">Check these details</p>
+          <ul className="mt-2 list-inside list-disc">{Object.entries(fieldErrors).map(([field, message]) => <li key={field}>{message}</li>)}</ul>
+        </div>
+      )}
+      <div className="settings-tabs" role="group" aria-label="Business settings sections">
         <button
           type="button"
+          aria-pressed={activeTab === 'profile'}
+          aria-controls="settings-panel"
           onClick={() => { setActiveTab('profile'); setSuccessMessage(null); setErrorMessage(null); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-none text-xs font-semibold transition-all ${
             activeTab === 'profile'
-              ? 'bg-white text-zinc-900 shadow-2xs border border-zinc-200/60'
-              : 'text-zinc-600 hover:text-zinc-900'
+              ? 'bg-white text-slate-900  border border-slate-200/60'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Building2 className="h-4 w-4 text-emerald-600" />
-          <span>Profile & Identity</span>
+          <Building2 className="h-4 w-4 text-blue-600" />
+          <span>Business identity</span>
         </button>
 
         <button
           type="button"
+          aria-pressed={activeTab === 'contact'}
+          aria-controls="settings-panel"
           onClick={() => { setActiveTab('contact'); setSuccessMessage(null); setErrorMessage(null); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-none text-xs font-semibold transition-all ${
             activeTab === 'contact'
-              ? 'bg-white text-zinc-900 shadow-2xs border border-zinc-200/60'
-              : 'text-zinc-600 hover:text-zinc-900'
+              ? 'bg-white text-slate-900  border border-slate-200/60'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <MapPin className="h-4 w-4 text-emerald-600" />
-          <span>Contact & Address</span>
+          <MapPin className="h-4 w-4 text-blue-600" />
+          <span>Contact & address</span>
         </button>
 
         <button
           type="button"
+          aria-pressed={activeTab === 'tax'}
+          aria-controls="settings-panel"
           onClick={() => { setActiveTab('tax'); setSuccessMessage(null); setErrorMessage(null); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-none text-xs font-semibold transition-all ${
             activeTab === 'tax'
-              ? 'bg-white text-zinc-900 shadow-2xs border border-zinc-200/60'
-              : 'text-zinc-600 hover:text-zinc-900'
+              ? 'bg-white text-slate-900  border border-slate-200/60'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Receipt className="h-4 w-4 text-emerald-600" />
-          <span>Localization & Tax</span>
+          <Receipt className="h-4 w-4 text-blue-600" />
+          <span>Regional & tax</span>
         </button>
 
         <button
           type="button"
+          aria-pressed={activeTab === 'branch'}
+          aria-controls="settings-panel"
           onClick={() => { setActiveTab('branch'); setSuccessMessage(null); setErrorMessage(null); }}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-none text-xs font-semibold transition-all ${
             activeTab === 'branch'
-              ? 'bg-white text-zinc-900 shadow-2xs border border-zinc-200/60'
-              : 'text-zinc-600 hover:text-zinc-900'
+              ? 'bg-white text-slate-900  border border-slate-200/60'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <GitBranch className="h-4 w-4 text-emerald-600" />
-          <span>Headquarters Branch</span>
+          <GitBranch className="h-4 w-4 text-blue-600" />
+          <span>Headquarters</span>
         </button>
       </div>
 
       {/* Main Tab Panels */}
       {activeTab !== 'branch' ? (
-        <form onSubmit={handleSaveBusiness} className="space-y-6">
-          {/* TAB 1: Profile & Identity */}
+      <form id="settings-panel" onSubmit={handleSaveBusiness} className="space-y-6" aria-busy={isSaving}>
+          {/* TAB 1: Business identity */}
           {activeTab === 'profile' && (
-            <div className="bg-white border border-zinc-200/80 rounded-xl p-6 shadow-2xs space-y-6">
-              <div className="border-b border-zinc-100 pb-4">
-                <h2 className="text-base font-bold text-zinc-900">Business Identity & Profile</h2>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Manage your public trading name, registered entity details, and primary business classification.
+            <div className="settings-panel space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h2 className="text-base font-bold text-slate-900">Business identity</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Business name and registered details.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Trading Name */}
                 <div>
-                  <label htmlFor="name" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Trading / Business Name <span className="text-rose-500">*</span>
+                  <label htmlFor="name" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Business name <span className="text-rose-500">*</span>
                   </label>
                   <input
                     id="name"
@@ -289,7 +309,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     disabled={!canEdit}
                     value={profile.name}
                     onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                     placeholder="e.g. Acme Corporation"
                   />
                   {fieldErrors.name && (
@@ -299,22 +319,22 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
                 {/* Slug (Read-only subdomain badge) */}
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Workspace Subdomain (Protected)
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Workspace address
                   </label>
-                  <div className="flex items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-mono text-zinc-600 select-all">
+                  <div className="flex items-center rounded-none border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-600 select-all">
                     <span>{initialData.organization.slug}</span>
-                    <span className="text-zinc-400">.stack37.com</span>
+                    <span className="text-slate-500">.stack37.com</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-1">
-                    Permanent subdomain routing key for tenant workspace isolation.
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Your workspace address is permanent.
                   </p>
                 </div>
 
                 {/* Legal Entity Name */}
                 <div>
-                  <label htmlFor="legalName" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Registered Legal Entity Name
+                  <label htmlFor="legalName" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Legal name
                   </label>
                   <input
                     id="legalName"
@@ -322,7 +342,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     disabled={!canEdit}
                     value={profile.legalName}
                     onChange={(e) => setProfile({ ...profile, legalName: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                     placeholder="e.g. Acme Logistics Private Limited"
                   />
                   {fieldErrors.legalName && (
@@ -332,8 +352,8 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
                 {/* Business Registration Number */}
                 <div>
-                  <label htmlFor="registrationNumber" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Business / Incorporation Number
+                  <label htmlFor="registrationNumber" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Business registration number (BRN)
                   </label>
                   <input
                     id="registrationNumber"
@@ -341,7 +361,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     disabled={!canEdit}
                     value={profile.registrationNumber}
                     onChange={(e) => setProfile({ ...profile, registrationNumber: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                     placeholder="e.g. PV-123456 / REG-7890"
                   />
                   {fieldErrors.registrationNumber && (
@@ -351,17 +371,17 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
                 {/* Business Category */}
                 <div className="md:col-span-2">
-                  <label htmlFor="categoryId" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Business Category / Industry
+                  <label htmlFor="categoryId" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Industry
                   </label>
                   <select
                     id="categoryId"
                     disabled={!canEdit}
                     value={profile.categoryId}
                     onChange={(e) => setProfile({ ...profile, categoryId: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                   >
-                    <option value="">Select industry classification...</option>
+                    <option value="">Select industry</option>
                     {initialData.categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name} {cat.description ? `— ${cat.description}` : ''}
@@ -373,31 +393,31 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
             </div>
           )}
 
-          {/* TAB 2: Contact & Registered Address */}
+          {/* TAB 2: Contact & address */}
           {activeTab === 'contact' && (
-            <div className="bg-white border border-zinc-200/80 rounded-xl p-6 shadow-2xs space-y-6">
-              <div className="border-b border-zinc-100 pb-4">
-                <h2 className="text-base font-bold text-zinc-900">Contact & Registered Address</h2>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Official correspondence channels and legal registered office address.
+            <div className="settings-panel space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h2 className="text-base font-bold text-slate-900">Contact & address</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Business contact and registered address.
                 </p>
               </div>
 
               {/* Contact Channels */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div>
-                  <label htmlFor="contactEmail" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Primary Contact Email
+                  <label htmlFor="contactEmail" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Contact email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+                    <Mail className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
                     <input
                       id="contactEmail"
                       type="email"
                       disabled={!canEdit}
                       value={profile.contactEmail}
                       onChange={(e) => setProfile({ ...profile, contactEmail: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 pl-9 pr-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="info@yourcompany.com"
                     />
                   </div>
@@ -407,18 +427,18 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                 </div>
 
                 <div>
-                  <label htmlFor="contactPhone" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Primary Business Phone
+                  <label htmlFor="contactPhone" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Phone
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+                    <Phone className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
                     <input
                       id="contactPhone"
                       type="tel"
                       disabled={!canEdit}
                       value={profile.contactPhone}
                       onChange={(e) => setProfile({ ...profile, contactPhone: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 pl-9 pr-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="+1 (555) 000-0000"
                     />
                   </div>
@@ -428,18 +448,18 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                 </div>
 
                 <div>
-                  <label htmlFor="website" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Website URL
+                  <label htmlFor="website" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Website
                   </label>
                   <div className="relative">
-                    <Globe className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-400" />
+                    <Globe className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
                     <input
                       id="website"
                       type="text"
                       disabled={!canEdit}
                       value={profile.website}
                       onChange={(e) => setProfile({ ...profile, website: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 pl-9 pr-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="https://yourcompany.com"
                     />
                   </div>
@@ -450,14 +470,14 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
               </div>
 
               {/* Registered Address */}
-              <div className="pt-4 border-t border-zinc-100">
-                <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-wider mb-4">
-                  Registered Business Address
+              <div className="pt-4 border-t border-slate-100">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">
+                  Registered address
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="md:col-span-2">
-                    <label htmlFor="addressLine1" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      Street Address Line 1
+                    <label htmlFor="addressLine1" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Street address
                     </label>
                     <input
                       id="addressLine1"
@@ -465,14 +485,14 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={profile.addressLine1}
                       onChange={(e) => setProfile({ ...profile, addressLine1: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="e.g. 100 Main Street, Suite 400"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="addressLine2" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      Address Line 2 (Optional)
+                    <label htmlFor="addressLine2" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Address line 2
                     </label>
                     <input
                       id="addressLine2"
@@ -480,14 +500,14 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={profile.addressLine2}
                       onChange={(e) => setProfile({ ...profile, addressLine2: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="Building, Floor, or Tower"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="city" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      City / Town
+                    <label htmlFor="city" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      City
                     </label>
                     <input
                       id="city"
@@ -495,14 +515,14 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={profile.city}
                       onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="e.g. Colombo / New York"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="stateProvince" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      State / Province / District
+                    <label htmlFor="stateProvince" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      State / province
                     </label>
                     <input
                       id="stateProvince"
@@ -510,13 +530,13 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={profile.stateProvince}
                       onChange={(e) => setProfile({ ...profile, stateProvince: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="e.g. Western Province / NY"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="postalCode" className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                    <label htmlFor="postalCode" className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Postal / ZIP Code
                     </label>
                     <input
@@ -525,7 +545,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={profile.postalCode}
                       onChange={(e) => setProfile({ ...profile, postalCode: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                       placeholder="e.g. 00300 / 10001"
                     />
                   </div>
@@ -534,25 +554,25 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
             </div>
           )}
 
-          {/* TAB 3: Localization & Tax */}
+          {/* TAB 3: Regional & tax */}
           {activeTab === 'tax' && (
-            <div className="bg-white border border-zinc-200/80 rounded-xl p-6 shadow-2xs space-y-6">
-              <div className="border-b border-zinc-100 pb-4">
-                <h2 className="text-base font-bold text-zinc-900">Operating Currency, Timezone & Tax</h2>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Configure default monetary standards, schedule timezones, and regional tax identification.
+            <div className="settings-panel space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h2 className="text-base font-bold text-slate-900">Regional & tax</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Currency, timezone and tax details.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Operating Currency */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label htmlFor="currency" className="block text-xs font-semibold text-zinc-700">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                    <label htmlFor="currency" className="block text-xs font-semibold text-slate-700">
                       Operating Currency <span className="text-rose-500">*</span>
                     </label>
                     {profile.countryCode === 'LK' && (
-                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                      <span className="text-[10px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-none border border-blue-200/60">
                         LKR Recommended
                       </span>
                     )}
@@ -563,7 +583,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     disabled={!canEdit}
                     value={profile.currency}
                     onChange={(e) => setProfile({ ...profile, currency: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                   >
                     <option value="">Select operating currency...</option>
                     {SUPPORTED_CURRENCIES.map((cur) => (
@@ -575,19 +595,19 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   {fieldErrors.currency && (
                     <p className="text-[11px] text-rose-500 mt-1">{fieldErrors.currency}</p>
                   )}
-                  <p className="text-[11px] text-zinc-400 mt-1">
-                    Standard monetary unit used across billing, financial reporting, and operations.
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Currency for business records.
                   </p>
                 </div>
 
                 {/* Operating Timezone */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label htmlFor="timezone" className="block text-xs font-semibold text-zinc-700">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                    <label htmlFor="timezone" className="block text-xs font-semibold text-slate-700">
                       Operating Timezone <span className="text-rose-500">*</span>
                     </label>
                     {profile.countryCode === 'LK' && (
-                      <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                      <span className="text-[10px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-none border border-blue-200/60">
                         Asia/Colombo Recommended
                       </span>
                     )}
@@ -598,7 +618,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     disabled={!canEdit}
                     value={profile.timezone}
                     onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                   >
                     <option value="">Select operating timezone...</option>
                     {COMMON_TIMEZONES.map((tz) => (
@@ -610,15 +630,15 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   {fieldErrors.timezone && (
                     <p className="text-[11px] text-rose-500 mt-1">{fieldErrors.timezone}</p>
                   )}
-                  <p className="text-[11px] text-zinc-400 mt-1">
-                    System logs, scheduling, and shifts synchronize against this timezone.
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Timezone for business records.
                   </p>
                 </div>
 
                 {/* Tax / VAT Identification */}
                 <div>
-                  <label htmlFor="taxId" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Tax / VAT Identification Number (TIN / GST / EIN)
+                  <label htmlFor="taxId" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Tax identification number (TIN)
                   </label>
                   <input
                     id="taxId"
@@ -626,7 +646,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     disabled={!canEdit}
                     value={profile.taxId}
                     onChange={(e) => setProfile({ ...profile, taxId: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                     placeholder="e.g. VAT-123456789 / TIN-987654"
                   />
                   {fieldErrors.taxId && (
@@ -636,15 +656,15 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
                 {/* Tax Registration Scheme */}
                 <div>
-                  <label htmlFor="taxStatus" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                    Regional Tax Scheme / Status
+                  <label htmlFor="taxStatus" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Tax status
                   </label>
                   <select
                     id="taxStatus"
                     disabled={!canEdit}
                     value={profile.taxStatus}
                     onChange={(e) => setProfile({ ...profile, taxStatus: e.target.value })}
-                    className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 capitalize"
+                    className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 capitalize"
                   >
                     <option value="standard">Standard Business Tax Status</option>
                     <option value="vat_registered">Registered for VAT / GST</option>
@@ -662,32 +682,32 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
               <button
                 type="submit"
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-zinc-900 text-white hover:bg-zinc-800 transition-colors shadow-2xs disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-none text-xs font-semibold bg-brand-navy text-white hover:bg-slate-800 transition-colors  disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                <span>{isSaving ? 'Saving Configuration...' : 'Save Configuration'}</span>
+                <span>{isSaving ? 'Saving…' : 'Save changes'}</span>
               </button>
             </div>
           )}
         </form>
       ) : (
-        /* TAB 4: Headquarters Operating Branch */
-        <form onSubmit={handleSaveBranch} className="space-y-6">
-          <div className="bg-white border border-zinc-200/80 rounded-xl p-6 shadow-2xs space-y-6">
-            <div className="border-b border-zinc-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        /* TAB 4: Headquarters */
+        <form id="settings-panel" onSubmit={handleSaveBranch} className="space-y-6" aria-busy={isSavingBranch}>
+          <div className="settings-panel space-y-6">
+            <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-zinc-900">Headquarters Operating Branch</h2>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Primary business facility provisioned during initial workspace registration.
+                <h2 className="text-base font-bold text-slate-900">Headquarters</h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Your primary operating location.
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+                  <span className="h-1.5 w-1.5 rounded-none bg-blue-500" />
                   Primary Facility
                 </span>
                 {initialData.headquartersBranch?.isOwnerAssigned && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                     Owner Linked
                   </span>
                 )}
@@ -697,8 +717,8 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Branch Name */}
               <div>
-                <label htmlFor="branchName" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  Operating Branch Name <span className="text-rose-500">*</span>
+                <label htmlFor="branchName" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Location name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   id="branchName"
@@ -707,7 +727,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   disabled={!canEdit}
                   value={branch.name}
                   onChange={(e) => setBranch({ ...branch, name: e.target.value })}
-                  className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                  className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="Headquarters"
                 />
                 {fieldErrors.name && (
@@ -717,8 +737,8 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
               {/* Branch Code */}
               <div>
-                <label htmlFor="branchCode" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  Branch Code / Identifier
+                <label htmlFor="branchCode" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Location code
                 </label>
                 <input
                   id="branchCode"
@@ -726,18 +746,18 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   disabled={!canEdit}
                   value={branch.code}
                   onChange={(e) => setBranch({ ...branch, code: e.target.value })}
-                  className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                  className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                   placeholder="HQ"
                 />
-                <p className="text-[11px] text-zinc-400 mt-1">
-                  Short code used for inventory, documents, and branch receipts.
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Short code for this location.
                 </p>
               </div>
 
               {/* Branch Phone */}
               <div>
-                <label htmlFor="branchPhone" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  Direct Facility Phone
+                <label htmlFor="branchPhone" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Phone
                 </label>
                 <input
                   id="branchPhone"
@@ -745,15 +765,15 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   disabled={!canEdit}
                   value={branch.contactPhone}
                   onChange={(e) => setBranch({ ...branch, contactPhone: e.target.value })}
-                  className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                  className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="+1 (555) 000-0000"
                 />
               </div>
 
               {/* Branch Email */}
               <div>
-                <label htmlFor="branchEmail" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                  Direct Facility Email
+                <label htmlFor="branchEmail" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Email
                 </label>
                 <input
                   id="branchEmail"
@@ -761,20 +781,20 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   disabled={!canEdit}
                   value={branch.contactEmail}
                   onChange={(e) => setBranch({ ...branch, contactEmail: e.target.value })}
-                  className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                  className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                   placeholder="hq@yourcompany.com"
                 />
               </div>
 
               {/* Physical Address */}
-              <div className="md:col-span-2 pt-3 border-t border-zinc-100">
-                <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-wider mb-4">
-                  Physical Operating Location
+              <div className="md:col-span-2 pt-3 border-t border-slate-100">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">
+                  Location address
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="md:col-span-2">
-                    <label htmlFor="bAddressLine1" className="block text-xs font-semibold text-zinc-700 mb-1.5">
-                      Physical Street Address
+                    <label htmlFor="bAddressLine1" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Street address
                     </label>
                     <input
                       id="bAddressLine1"
@@ -782,13 +802,13 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={branch.addressLine1}
                       onChange={(e) => setBranch({ ...branch, addressLine1: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="e.g. 100 Commercial Avenue"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="bCity" className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                    <label htmlFor="bCity" className="block text-xs font-semibold text-slate-700 mb-1.5">
                       City
                     </label>
                     <input
@@ -797,13 +817,13 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={branch.city}
                       onChange={(e) => setBranch({ ...branch, city: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                       placeholder="City"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="bPostalCode" className="block text-xs font-semibold text-zinc-700 mb-1.5">
+                    <label htmlFor="bPostalCode" className="block text-xs font-semibold text-slate-700 mb-1.5">
                       Postal Code
                     </label>
                     <input
@@ -812,7 +832,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                       disabled={!canEdit}
                       value={branch.postalCode}
                       onChange={(e) => setBranch({ ...branch, postalCode: e.target.value })}
-                      className="w-full text-xs rounded-lg border border-zinc-200 px-3 py-2 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-zinc-50 disabled:text-zinc-500 font-mono"
+                      className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
                       placeholder="00300"
                     />
                   </div>
@@ -827,10 +847,10 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
               <button
                 type="submit"
                 disabled={isSavingBranch}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold bg-zinc-900 text-white hover:bg-zinc-800 transition-colors shadow-2xs disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-none text-xs font-semibold bg-brand-navy text-white hover:bg-slate-800 transition-colors  disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                <span>{isSavingBranch ? 'Saving Branch...' : 'Save Headquarters Information'}</span>
+                <span>{isSavingBranch ? 'Saving…' : 'Save Headquarters'}</span>
               </button>
             </div>
           )}

@@ -84,7 +84,7 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
     } else if (!SLUG_REGEX.test(slug)) {
       errors.slug = 'Workspace URL can only contain lowercase letters, numbers, and single hyphens.';
     } else if (RESERVED_SLUGS.has(slug)) {
-      errors.slug = 'This workspace URL is reserved. Please choose another name.';
+      errors.slug = 'This workspace address is reserved. Choose another.';
     }
 
     if (!countryCode || countryCode.length !== 2) {
@@ -137,44 +137,44 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
 
   if (registeredOrg) {
     return (
-      <Card className="border-zinc-200/80 shadow-xs">
+      <Card className="border-0 p-0 md:p-0">
         <CardHeader>
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-none bg-blue-50 text-blue-600 border border-blue-100">
             <Building2 className="h-6 w-6" />
           </div>
-          <CardTitle className="text-center">Business Workspace Created</CardTitle>
+          <CardTitle as="h1" className="text-center">Workspace created</CardTitle>
           <CardDescription className="text-center">
-            <strong>{name}</strong> has been successfully registered. You are designated as the primary owner.
+            <strong>{name}</strong> is ready. You are the Primary Owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg bg-zinc-50 border border-zinc-200/60 p-4 text-xs space-y-2 text-zinc-600">
+          <div className="rounded-none bg-slate-50 border border-slate-200/60 p-4 text-xs space-y-2 text-slate-600">
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500 font-medium">Workspace Identifier:</span>
-              <span className="font-mono font-semibold text-zinc-900">{registeredOrg.slug}</span>
+              <span className="text-slate-500 font-medium">Workspace</span>
+              <span className="font-mono font-semibold text-slate-900">{registeredOrg.slug}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500 font-medium">Primary Owner:</span>
-              <span className="font-semibold text-zinc-900 truncate max-w-[200px]">{userEmail || 'Active Account'}</span>
+              <span className="text-slate-500 font-medium">Primary Owner</span>
+              <span className="font-semibold text-slate-900 truncate max-w-[200px]">{userEmail || 'Active Account'}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500 font-medium">Subscription Tier:</span>
-              <span className="text-emerald-700 font-semibold uppercase text-[11px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+              <span className="text-slate-500 font-medium">Plan</span>
+              <span className="text-blue-700 font-semibold uppercase text-[11px] bg-blue-50 px-2 py-0.5 rounded-none border border-blue-200/60">
                 {registeredOrg.planName || 'Standard'}
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500 font-medium">Trial Duration:</span>
-              <span className="font-semibold text-zinc-900">7 Days</span>
+              <span className="text-slate-500 font-medium">Trial</span>
+              <span className="font-semibold text-slate-900">7 Days</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500 font-medium">Payment Method:</span>
-              <span className="text-zinc-500">None Required for Trial</span>
+              <span className="text-slate-500 font-medium">Payment</span>
+              <span className="text-slate-500">Not required for trial</span>
             </div>
           </div>
 
-          <p className="text-xs text-zinc-500 text-center leading-relaxed">
-            Your host-only session is established on this portal. Return to your workspace selector to access all active organizations.
+          <p className="text-xs text-slate-500 text-center leading-relaxed">
+            Choose your new workspace to continue.
           </p>
 
           <Button
@@ -183,7 +183,7 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
             className="w-full"
             onClick={() => router.push('/select-organization')}
           >
-            <span>Proceed to Workspace Selection</span>
+            <span>Choose workspace</span>
             <ArrowRight className="h-4 w-4 ml-1.5" />
           </Button>
         </CardContent>
@@ -192,11 +192,11 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
   }
 
   return (
-    <Card className="border-zinc-200/80 shadow-xs">
+    <Card className="border-0 p-0 md:p-0">
       <CardHeader>
-        <CardTitle>Register Business Workspace</CardTitle>
+        <CardTitle as="h1">Register your business</CardTitle>
         <CardDescription>
-          Establish your organization to begin managing multi-tenant operations. All new workspaces include a 7-day free trial.
+          Start your 7-day free trial.
         </CardDescription>
       </CardHeader>
 
@@ -211,7 +211,7 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
           <div className="space-y-1">
             <Input
               id="businessName"
-              label="Business Name"
+              label="Business name"
               type="text"
               placeholder="e.g. Acme Corporation"
               value={name}
@@ -224,38 +224,38 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="slug" className="block text-xs font-semibold text-zinc-700">
-              Workspace URL Subdomain
+            <label htmlFor="slug" className="block text-sm font-medium text-slate-700">
+              Workspace address
             </label>
-            <div className="flex rounded-lg shadow-2xs border border-zinc-200/80 focus-within:ring-2 focus-within:ring-zinc-900 focus-within:border-zinc-900 bg-white overflow-hidden">
-              <span className="inline-flex items-center px-3 text-xs text-zinc-400 bg-zinc-50 border-r border-zinc-200/60 select-none">
+            <div className="flex rounded-none  border border-slate-200/80 focus-within:ring-2 focus-within:ring-brand-blue focus-within:border-brand-blue bg-white overflow-hidden">
+              <span className="inline-flex items-center px-3 text-xs text-slate-500 bg-slate-50 border-r border-slate-200/60 select-none">
                 https://
               </span>
               <input
                 id="slug"
                 type="text"
-                className="block w-full min-w-0 flex-1 border-0 px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:ring-0 font-mono"
+                className="block min-h-11 w-full min-w-0 flex-1 border-0 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-500 focus:ring-0 font-mono"
                 placeholder="acme-corp"
                 value={slug}
                 onChange={handleSlugChange}
                 disabled={isLoading}
                 required
               />
-              <span className="inline-flex items-center px-3 text-xs text-zinc-500 bg-zinc-50 border-l border-zinc-200/60 select-none font-mono">
+              <span className="inline-flex items-center px-3 text-xs text-slate-500 bg-slate-50 border-l border-slate-200/60 select-none font-mono">
                 .stack37.com
               </span>
             </div>
             {fieldErrors.slug && (
               <p className="text-[11px] text-red-600 font-medium mt-1">{fieldErrors.slug}</p>
             )}
-            <p className="text-[11px] text-zinc-400 leading-tight">
+            <p className="text-[11px] text-slate-500 leading-tight">
               3 to 63 lowercase alphanumeric characters and single hyphens.
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="countryCode" className="block text-xs font-semibold text-zinc-700">
-              Country of Incorporation / Operation
+            <label htmlFor="countryCode" className="block text-sm font-medium text-slate-700">
+              Country of operation
             </label>
             <div className="relative">
               <select
@@ -263,7 +263,7 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
                 disabled={isLoading}
-                className="w-full rounded-lg border border-zinc-200/80 bg-white px-3 py-2 text-xs text-zinc-900 shadow-2xs focus:border-zinc-900 focus:outline-hidden focus:ring-2 focus:ring-zinc-900 disabled:opacity-50"
+                className="min-h-11 w-full rounded-none border border-slate-200/80 bg-white px-3 py-2 text-xs text-slate-900  focus:border-slate-900 focus:outline-hidden focus:ring-2 focus:ring-slate-900 disabled:opacity-50"
               >
                 {COMMON_COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -278,24 +278,24 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
           </div>
 
           {userEmail && (
-            <div className="rounded-lg bg-zinc-50 border border-zinc-200/60 p-3 flex items-center justify-between text-xs">
+            <div className="rounded-none bg-slate-50 border border-slate-200/60 p-3 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 truncate">
-                <UserCircle className="h-4 w-4 text-zinc-400 shrink-0" />
-                <span className="text-zinc-500 truncate">Primary Owner:</span>
-                <span className="font-semibold text-zinc-800 truncate">{userEmail}</span>
+                <UserCircle className="h-4 w-4 text-slate-500 shrink-0" />
+                <span className="text-slate-500 truncate">Primary Owner</span>
+                <span className="font-semibold text-slate-800 truncate">{userEmail}</span>
               </div>
-              <span className="text-[10px] uppercase font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 shrink-0">
+              <span className="text-[10px] uppercase font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-none border border-blue-200/60 shrink-0">
                 Owner
               </span>
             </div>
           )}
 
-          <div className="rounded-lg bg-zinc-50/80 border border-zinc-200/60 p-3 flex items-center justify-between text-xs">
+          <div className="rounded-none bg-slate-50/80 border border-slate-200/60 p-3 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
-              <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="text-zinc-700 font-medium">7-Day Free Trial</span>
+              <span className="inline-flex h-2 w-2 rounded-none bg-blue-500 shrink-0" />
+              <span className="text-slate-700 font-medium">7-Day Free Trial</span>
             </div>
-            <span className="text-[11px] text-zinc-500">No payment details required</span>
+            <span className="text-[11px] text-slate-500">No payment details required</span>
           </div>
 
           <Button
@@ -306,14 +306,14 @@ export function RegistrationForm({ userEmail }: RegistrationFormProps) {
             isLoading={isLoading}
             disabled={isLoading}
           >
-            Create Workspace (Start 7-Day Trial)
+            Create workspace
           </Button>
         </CardContent>
 
-        <CardFooter className="justify-center border-t border-zinc-100 pt-3">
-          <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-            <span>Multi-Tenant Isolation Protection • My Business by STACK37</span>
+        <CardFooter className="justify-center border-t border-slate-100 pt-3">
+          <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+            <span>My Business by STACK37</span>
           </div>
         </CardFooter>
       </form>

@@ -15,14 +15,14 @@ export function Alert({
 }: AlertProps) {
   const variantStyles = {
     error: 'border-rose-200 bg-rose-50 text-rose-900',
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    success: 'border-blue-200 bg-blue-50 text-blue-900',
     info: 'border-sky-200 bg-sky-50 text-sky-900',
     warning: 'border-amber-200 bg-amber-50 text-amber-900',
   };
 
   const iconStyles = {
     error: 'text-rose-600',
-    success: 'text-emerald-600',
+    success: 'text-blue-600',
     info: 'text-sky-600',
     warning: 'text-amber-600',
   };
@@ -39,7 +39,7 @@ export function Alert({
   return (
     <div
       role="alert"
-      className={`flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed ${variantStyles[variant]} ${className}`.trim()}
+      className={`flex items-start gap-3 border p-4 text-sm leading-relaxed ${variantStyles[variant]} ${className}`.trim()}
       {...props}
     >
       <IconComponent className={`h-5 w-5 shrink-0 mt-0.5 ${iconStyles[variant]}`} />

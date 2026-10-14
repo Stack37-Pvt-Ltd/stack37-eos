@@ -24,6 +24,7 @@
 | **DEC-012** | **Sequential Development Priorities** | Priority sequence is: (1) Project Control Setup, (2) Foundation Stabilization, (3) UI/UX Approval. Team Management and ERP feature development are paused until priorities 1–3 are approved. | Oct 13, 2026 |
 | **DEC-013** | **Executive Change Governance** | The CEO must review and authorize all significant product decisions, Git commits/pushes, and live database migrations. | Oct 13, 2026 |
 | **DEC-014** | **Permanent Agent Responsibility Policy** | CEO-approved division of responsibilities: Antigravity (Backend Owner), Codex (Frontend/UI Owner), ChatGPT (Product Coordination), CEO (Final Authority). Technical isolation via separate branches/worktrees required for parallel work. | Oct 13, 2026 |
+| **DEC-015** | **Approved TASK-STAB-003 Product UI** | CEO approved the actual Codex exploration: official logo, Geist, concise modern minimal pages, white/pale blue-grey surfaces, navy square buttons, restrained blue/violet accents and horizontal workspace navigation. No fixed left sidebar. Reuse this pattern for future approved features. Implementation separately authorized as TASK-STAB-004. | Oct 13–14, 2026 |
 
 ---
 
@@ -31,9 +32,9 @@
 
 | Item ID | Decision Required | Available Options & Context | Current Status |
 | :--- | :--- | :--- | :--- |
-| **OQ-001** | **Project Control System Activation** | Formal sign-off on the proposed permanent project-control files ([AGENTS.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/AGENTS.md), [PROJECT_STATE.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/PROJECT_STATE.md), `docs/*`). | Under CEO Review (`TASK-STAB-001`) |
-| **OQ-002** | **Authorization for Foundation Stabilization** | Authorization to execute `TASK-STAB-002`: reconcile Phase 3C.3, verify remote database, run test regression, and commit to Git. | Pending CEO Green Light |
-| **OQ-003** | **UI/UX Design Review & Approval** | Formal review of corporate visual identity, official logo assets, navy typography, and blue/violet UI design (`TASK-STAB-003`). | Pending CEO Green Light |
+| **OQ-001** | **Project Control System Activation** | Formal sign-off on the permanent project-control files ([AGENTS.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/AGENTS.md), [PROJECT_STATE.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/PROJECT_STATE.md), `docs/*`). | **Closed** — Authorized and synchronized to `feature/phase1-foundation` in Commit `823caab`. |
+| **OQ-002** | **Authorization for Foundation Stabilization** | Authorization to execute `TASK-STAB-002`: reconcile Phase 3C.3, verify remote database, run test regression, and commit to Git. | **Closed** — Authorized and synchronized to `feature/phase1-foundation` in Commit `d17ed63`. |
+| **OQ-003** | **UI/UX Design Review & Approval** | Actual Codex mockup and refinements approved by CEO. Reference archived at `docs/references/TASK-STAB-003-approved-design.html`. | Closed — TASK-STAB-003 design and TASK-STAB-004 implementation accepted |
 | **OQ-004** | **Commercial Pricing & Packaging** | Approved subscription tier names and monthly/annual pricing amounts in LKR and USD. | Proposal pending; plan price is placeholder `0.00`. |
 | **OQ-005** | **Primary Payment Gateway Selection** | Selection between Lemon Squeezy (international cards) and local Sri Lankan payment gateways (PayHere / WEBXPAY for LKR). | Database decoupled (Migration 08); integration paused. |
 

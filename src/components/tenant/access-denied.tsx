@@ -35,15 +35,15 @@ export function TenantAccessDenied({
   const isSuspended = reason === 'suspended';
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 antialiased">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 antialiased">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Card className="border-zinc-200/80 shadow-xs">
+        <Card className="border-slate-200/80 ">
           <CardHeader>
             <div
-              className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl border ${
+              className={`mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-none border ${
                 isSuspended
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
-                  : 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                  : 'bg-slate-100 text-slate-700 border-slate-200'
               }`}
             >
               {isSuspended ? (
@@ -52,14 +52,14 @@ export function TenantAccessDenied({
                 <ShieldAlert className="h-6 w-6" />
               )}
             </div>
-            <CardTitle className="text-center text-lg font-bold">
+            <CardTitle as="h1" className="text-center text-lg font-bold">
               {isSuspended ? 'Membership Suspended' : 'Access Restricted'}
             </CardTitle>
             <CardDescription className="text-center">
               {isSuspended ? (
                 <>
                   Your employee access to{' '}
-                  <span className="font-semibold text-zinc-900">
+                  <span className="font-semibold text-slate-900">
                     {organizationName || tenantSlug}
                   </span>{' '}
                   has been suspended.
@@ -67,7 +67,7 @@ export function TenantAccessDenied({
               ) : (
                 <>
                   You do not have active membership in the{' '}
-                  <span className="font-semibold text-zinc-900">
+                  <span className="font-semibold text-slate-900">
                     {tenantSlug}
                   </span>{' '}
                   workspace.
@@ -77,42 +77,40 @@ export function TenantAccessDenied({
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <div className="rounded-lg bg-zinc-100/70 border border-zinc-200/60 p-3.5 text-xs text-zinc-600 space-y-1.5">
+            <div className="rounded-none bg-slate-100/70 border border-slate-200/60 p-3.5 text-xs text-slate-600 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500 font-medium">Signed in as:</span>
-                <span className="font-mono font-medium text-zinc-800">
+                <span className="text-slate-500 font-medium">Signed in as:</span>
+                <span className="font-mono font-medium text-slate-800">
                   {userEmail || 'Authenticated User'}
                 </span>
               </div>
-              <p className="text-zinc-500 pt-1 leading-relaxed border-t border-zinc-200/60">
+              <p className="text-slate-500 pt-1 leading-relaxed border-t border-slate-200/60">
                 {isSuspended
                   ? 'Access to this workspace has been temporarily revoked by your organization administrator.'
                   : 'If you were recently invited, ensure your invitation was accepted using this email address.'}
               </p>
             </div>
 
-            <Link href="/select-organization" className="block w-full">
-              <Button variant="primary" size="md" className="w-full justify-center gap-2">
-                <span>View Authorized Workspaces</span>
+            <Button asChild variant="primary" size="md" className="w-full justify-center gap-2"><Link href="/select-organization" className="block w-full">
+                <span>Choose a workspace</span>
                 <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link></Button>
 
             <Button
               variant="outline"
               size="md"
-              className="w-full justify-center gap-2 text-zinc-700"
+              className="w-full justify-center gap-2 text-slate-700"
               onClick={handleLogout}
               isLoading={isLoggingOut}
             >
               <LogOut className="h-4 w-4" />
-              <span>Sign Out / Switch Account</span>
+              <span>Sign out</span>
             </Button>
           </CardContent>
 
-          <CardFooter className="justify-center border-t border-zinc-100 pt-4">
-            <p className="text-[11px] text-zinc-400 text-center">
-              My Business by STACK37 Multi-Tenant Security
+          <CardFooter className="justify-center border-t border-slate-100 pt-4">
+            <p className="text-[11px] text-slate-500 text-center">
+              My Business by STACK37
             </p>
           </CardFooter>
         </Card>

@@ -1,0 +1,79 @@
+[
+  {
+    "screen": "login",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Sign in",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "register",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Create your account",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "forgot",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Reset your password",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "reset",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Set new password",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "verify",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Verify your email",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "confirm",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Invalid link",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "registration",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Register your business",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "directory",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Choose a workspace",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "overview",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Serendib Supply Company",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "settings",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Business settings",
+    "overflow": false,
+    "width": 375
+  },
+  {
+    "screen": "denied",
+    "font": "Geist, Arial, sans-serif",
+    "heading": "Access Restricted",
+    "overflow": false,
+    "width": 375
+  }
+]
