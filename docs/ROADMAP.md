@@ -15,11 +15,11 @@ To ensure rigorous execution and prevent technical debt, development proceeds st
 ```mermaid
 graph TD
     subgraph "Immediate Stabilization Era (Current Focus)"
-        P1["Priority 1: Project Control Setup<br/>(TASK-STAB-001 — Ready for review)"]
-        --> P2["Priority 2: Foundation Stabilization<br/>(TASK-STAB-002 — In progress per task register)"]
+        P1["Priority 1: Project Control Setup<br/>(TASK-STAB-001 — Synchronized)"]
+        --> P2["Priority 2: Foundation Stabilization<br/>(TASK-STAB-002 — Synchronized)"]
         --> P3["Priority 3: UI/UX Design Approval<br/>(TASK-STAB-003 — Accepted)"]
-        --> P4["Priority 4: Existing Interface Alignment<br/>(TASK-STAB-004 — Ready for review)"]
-        --> P5["Priority 5: Integrated Verification<br/>(TASK-STAB-005 — Proposed)"]
+        --> P4["Priority 4: Existing Interface Alignment<br/>(TASK-STAB-004 — Accepted)"]
+        --> P5["Priority 5: Integrated Verification<br/>(TASK-STAB-005 — Local-only accepted)"]
     end
 
     subgraph "Commercial Foundation Era (Post-Stabilization)"
@@ -47,11 +47,11 @@ graph TD
 
 ## 2. Milestone Details & Customer Capabilities
 
-### Priority 1: Project Control Setup *(ACTIVE — TASK-STAB-001)*
+### Priority 1: Project Control Setup *(SYNCHRONIZED — TASK-STAB-001)*
 * **Owner:** Google Antigravity (Backend Owner)
 * **Scope:** Institute permanent cross-agent documentation (`AGENTS.md`, `PROJECT_STATE.md`, `docs/*`), responsibility policy, and evidence framework.
 
-### Priority 2: Foundation Stabilization *(PROPOSED — TASK-STAB-002)*
+### Priority 2: Foundation Stabilization *(SYNCHRONIZED — TASK-STAB-002)*
 * **Owner:** Google Antigravity (Backend Owner)
 * **Scope:** Reconcile Phase 3C.3 uncommitted files, verify remote migrations 11 & 12, run complete test regression suites, and perform CEO-authorized Git commit.
 
@@ -59,18 +59,18 @@ graph TD
 * **Owner:** ChatGPT Codex (Frontend/UI Owner) & CEO
 * **Scope:** Review and approve corporate visual identity, official STACK37 logo, navy typography, blue/violet palette, layout navigation, and eliminate placeholder elements.
 
-### Priority 4: Existing Interface Alignment *(READY FOR REVIEW — TASK-STAB-004)*
+### Priority 4: Existing Interface Alignment *(ACCEPTED — TASK-STAB-004)*
 * **Owner:** ChatGPT Codex (Frontend/UI Owner)
 * **Scope:** Align existing authentication, layout, dashboard, and settings screens to the approved UI/UX design.
 
-### Priority 5: Integrated Verification *(PROPOSED — TASK-STAB-005)*
+### Priority 5: Integrated Verification *(LOCAL-ONLY ACCEPTED — TASK-STAB-005)*
 * **Owner:** Joint (Google Antigravity + ChatGPT Codex)
-* **Scope:** Joint end-to-end regression audit across backend RPCs, security, and aligned UI interfaces.
+* **Scope:** Local checks accepted by the CEO under DEC-020. Real database, security, and sign-in checks remain mandatory before commercial deployment.
 
 ---
 
-### Milestone 2: Team Collaboration & Staff Management *(PLANNED LAUNCH SCOPE)*
-* **Status:** Confirmed Launch Requirement (Requires completion of Priorities 1–5)
+### Milestone 2: Team Collaboration & Staff Management *(LOCAL IMPLEMENTATION ACCEPTED)*
+* **Status:** CEO accepted the local implementation under DEC-020. Real-service release checks remain open; invitation acceptance is disabled and Migration 13 is unapplied.
 * **What Customers Can Do After Completion:**
   * Business Owner or Administrator invites team members via email.
   * Assigns roles: `Administrator` (manage staff, view audit) or `Member` (operational staff).
