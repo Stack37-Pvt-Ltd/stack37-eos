@@ -9,15 +9,74 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     vi.restoreAllMocks();
   });
 
-  it('rewrites mybusiness subdomain to /registration', async () => {
+  it('redirects central mybusiness portal root (mybusiness.localhost:3000/) to /login', async () => {
     const req = new NextRequest('http://mybusiness.localhost:3000/', {
       headers: { host: 'mybusiness.localhost:3000' },
     });
     const res = await proxy(req);
 
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/login');
+  });
+
+  it('redirects central mybusiness portal root in production (mybusiness.stack37.com/) to /login', async () => {
+    const req = new NextRequest('https://mybusiness.stack37.com/', {
+      headers: { host: 'mybusiness.stack37.com' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('https://mybusiness.stack37.com/login');
+  });
+
+  it('preserves query parameters when redirecting central mybusiness portal root to /login', async () => {
+    const req = new NextRequest('https://mybusiness.stack37.com/?returnUrl=%2Ftenant%2Facme', {
+      headers: { host: 'mybusiness.stack37.com' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('https://mybusiness.stack37.com/login?returnUrl=%2Ftenant%2Facme');
+  });
+
+  it('preserves Set-Cookie and applies private Cache-Control when session refreshes during root redirect', async () => {
+    const mockSupabaseResponse = NextResponse.next();
+    mockSupabaseResponse.cookies.set('sb-access-token', 'fresh-portal-jwt', {
+      path: '/',
+      sameSite: 'lax',
+      secure: false,
+    });
+
+    vi.spyOn(supabaseProxyModule, 'updateSession').mockImplementation(async (r) => {
+      r.cookies.set('sb-access-token', 'fresh-portal-jwt');
+      return {
+        supabaseResponse: mockSupabaseResponse,
+        user: { id: 'portal-user-id' } as unknown as import('@supabase/supabase-js').User,
+        hasCookiesSet: true,
+      };
+    });
+
+    const req = new NextRequest('http://mybusiness.localhost:3000/', {
+      headers: { host: 'mybusiness.localhost:3000' },
+    });
+
+    const res = await proxy(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/login');
+    expect(res.cookies.get('sb-access-token')?.value).toBe('fresh-portal-jwt');
+    expect(res.headers.get('Cache-Control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
+  });
+
+  it('preserves tenant subdomain root routing to /tenant/[tenantSlug] and does not redirect to /login', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+
     expect(res.status).toBe(200);
-    // In Next.js rewrite responses, x-middleware-rewrite header indicates internal rewrite destination
-    expect(res.headers.get('x-middleware-rewrite')).toContain('/registration');
+    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/acmecorp');
+    expect(res.headers.get('location')).toBeNull();
   });
 
   it('rewrites tenant subdomain to /tenant/[tenantSlug]', async () => {

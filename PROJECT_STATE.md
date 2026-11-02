@@ -1,10 +1,10 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
 **Last updated:** October 14, 2026 (Asia/Colombo)
-**Branch:** `codex/task-stab-005-integration` (local, based on `d17ed63a48e2313df0f5406d9074f9076b788721`)
-**Committed baseline:** `d17ed63a48e2313df0f5406d9074f9076b788721`
-**Current task:** `TASK-STAB-005` — IN_PROGRESS; prior local integration ACCEPTED, TASK-STAB-005C corrections integrated locally and READY_FOR_REVIEW; real database/authentication verification DEFERRED / NOT EXECUTED
-**Evidence:** Prior CEO-accepted 189-test integration; combined corrections now pass 194 unit tests, TypeScript and ESLint, with mocked browser workflow checks; no commit or deployment
+**Branch:** `codex/task-stab-005-integration` (local checkpoint `132e54a`, based on `d17ed63a48e2313df0f5406d9074f9076b788721`)
+**Committed baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6` (TASK-STAB-005 integration checkpoint)
+**Current task:** `TASK-PROD-LOGIN-001` — READY_FOR_REVIEW (Backend routing correction complete & verified); `TASK-STAB-005` accepted for local-only scope with real-service release gate open.
+**Evidence:** 198/198 local unit tests across 13 files, TypeScript, scoped ESLint, git diff check pass. No UK Super changes or migrations included. Zero commits, pushes, or deployments.
 
 ---
 
@@ -25,7 +25,8 @@ The approved TASK-STAB-003 visual direction is recorded in [docs/DESIGN_STANDARD
 | TASK-STAB-005A Backend integration readiness | COMPLETED |
 | TASK-STAB-005B Backend safeguards and memory update | ACCEPTED by CEO |
 | TASK-STAB-005C Focused backend corrections | Integrated locally under CEO authorization; READY_FOR_REVIEW with 194 combined unit tests, TypeScript and ESLint passing |
-| TASK-STAB-005 Integrated verification | IN_PROGRESS — local integration phase ACCEPTED by CEO (October 14, 2026); real database, RLS, rollback and authentication verification is DEFERRED / NOT EXECUTED |
+| TASK-STAB-005 Integrated verification | ACCEPTED — CEO approved the local-only report; real database, RLS, rollback and authentication verification remains an open release gate |
+| TASK-PROD-LOGIN-001 Production login screen & routing | READY_FOR_REVIEW — Backend routing correction complete (`src/proxy.ts` redirects `mybusiness.stack37.com/` to `/login`, preserving tenant subdomains and direct `/registration`; 198 unit tests passing) |
 
 Future product modules and milestones in [docs/ROADMAP.md](docs/ROADMAP.md) retain their existing scope and status. This snapshot does not authorize new ERP work.
 
@@ -39,7 +40,7 @@ Independent VAT and SSCL settings, team management, ERP operations, subscription
 
 ## Current working tree
 
-Changes are local and uncommitted on `codex/task-stab-005-integration`; baseline `d17ed63a48e2313df0f5406d9074f9076b788721` is unchanged. Separate verified file snapshots of TASK-STAB-004 and TASK-STAB-005B were created under `%TEMP%\STACK37-EOS-TASK-STAB-005-checkpoint-d75b476588e94232a867fceac526991e`; manifests and SHA-256 hashes are recorded in the TASK-STAB-005 integration report. The UI implementation is preserved. The 19 backend safeguard unit tests and checkpointed Version 1.0 verification plan are present in the main project. Four shared governance files were reconciled manually. Codex did not write to Antigravity's worktree. Its revised Version 2.0 plan remains a separate pending proposal at `.worktrees/backend-safeguards/docs/verification/TASK-STAB-005_backend_verification_plan.md`, as directed by the CEO; it has not replaced the integrated Version 1.0 or received execution authorization in this task.
+The prior integration and corrections are now preserved in local commit `132e54a`; the earlier baseline `d17ed63a48e2313df0f5406d9074f9076b788721` remains in history. This local-only pass changes only the task register, this snapshot, and its verification report, without a commit or push. Separate verified file snapshots of TASK-STAB-004 and TASK-STAB-005B were created under `%TEMP%\STACK37-EOS-TASK-STAB-005-checkpoint-d75b476588e94232a867fceac526991e`; manifests and SHA-256 hashes are recorded in the TASK-STAB-005 integration report. The UI implementation is preserved. The 19 original backend safeguard unit tests and checkpointed Version 1.0 verification plan are present in the main project. Four shared governance files were reconciled manually. Codex did not write to Antigravity's worktree. Its revised Version 2.0 plan remains a separate pending proposal at `.worktrees/backend-safeguards/docs/verification/TASK-STAB-005_backend_verification_plan.md`, as directed by the CEO; it has not replaced the integrated Version 1.0 or received execution authorization in this task.
 
 The initial accepted integration did not change backend runtime behavior. The subsequent CEO-authorized TASK-STAB-005C integration imports only Antigravity's corrections in `src/lib/auth/business-config.ts` and `src/lib/actions/organization.ts`, plus three supporting unit-test files. The frontend, authentication, settings write actions, tenant guard, proxy, validations, migrations, database and live services are preserved. A further verified checkpoint of both worktrees precedes this import; see [corrections integration report](docs/reviews/TASK-STAB-005/CORRECTIONS-INTEGRATION-REPORT.md).
 
@@ -50,6 +51,8 @@ The CEO accepted the TASK-STAB-005 local integration phase on October 14, 2026: 
 Prior TASK-STAB-004 checks included 170 unit tests, TypeScript, ESLint, production build, frontend interaction/layout fixtures, and browser review at 375px and 1440px. Its evidence remains in [docs/reviews/TASK-STAB-004/REPORT.md](docs/reviews/TASK-STAB-004/REPORT.md) and [docs/reviews/TASK-STAB-004/FINAL-QUALITY-GATE.md](docs/reviews/TASK-STAB-004/FINAL-QUALITY-GATE.md).
 
 After TASK-STAB-005C integration: **194/194 tests across 13 files**, TypeScript and ESLint pass. Registration success/error and Settings/Headquarters owner/readonly interactions were verified in the existing isolated browser fixture with mocked actions. These checks do not prove persistence, provisioning transactions or real sessions. The production build was not rerun for this correction task; the earlier successful build is historical evidence. Database-dependent security and authentication tests remain **DEFERRED / NOT EXECUTED**.
+
+The CEO-directed local-only verification pass on October 14, 2026 reran **194/194 tests across 13 files**, TypeScript, scoped ESLint, and a production build successfully. A local production server returned HTTP 200 for login, register, and confirmation pages on the required `mybusiness.localhost` host. An unscoped ESLint scan was interrupted while traversing nested worktrees; browser automation was unavailable, so neither is claimed as a pass. The CEO approved the [LOCAL-ONLY-VERIFICATION.md](docs/reviews/TASK-STAB-005/LOCAL-ONLY-VERIFICATION.md) report in this conversation. No staging or live database test was run.
 
 ## Backend correction status and remaining hardening
 
@@ -65,4 +68,4 @@ After TASK-STAB-005C integration: **194/194 tests across 13 files**, TypeScript 
 - **Transactions:** Verify atomic organization/Headquarters/membership/subscription provisioning, rollback on failure, and database constraints without partial records.
 - **Authentication and workflows:** Verify real signup, confirmation, login, recovery, session/cookie behavior across workspace subdomains, organization switching, and Business Settings persistence/permissions.
 
-**Current boundary:** Prior local integration is ACCEPTED; overall TASK-STAB-005 remains IN_PROGRESS. The CEO separately authorized local integration of the two TASK-STAB-005C corrections; that work is now READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED until actually run in an authorized environment. The revised verification proposal remains separate and pending. No commit, push, merge, rebase, deployment, production-service change, worktree deletion, further backend behavior or unrelated work is authorized. Both worktrees and all recovery/report evidence remain preserved.
+**Current boundary:** Prior local integration and the CEO-directed local-only TASK-STAB-005 pass are ACCEPTED. TASK-STAB-005C corrections remain READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED and remain mandatory before commercial deployment. The revised verification proposal remains separate and pending. This pass made no commit, push, merge, rebase, deployment, production-service change, worktree deletion, or backend behavior change. All worktrees and recovery/report evidence remain preserved. This acceptance does not authorize Migration 13, deployment, or a new ERP task.

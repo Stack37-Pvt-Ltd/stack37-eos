@@ -83,11 +83,22 @@ export default async function proxy(request: NextRequest) {
     // Shared authentication routes map directly to top-level handlers
     targetUrl = url;
   } else if (subdomain === 'mybusiness') {
-    // mybusiness subdomain root -> registration route
+    // Central mybusiness portal root -> redirect to /login
     if (url.pathname === '/' || url.pathname === '') {
-      url.pathname = '/registration';
-    } else if (!url.pathname.startsWith('/registration')) {
-      url.pathname = `/registration${url.pathname}`;
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/login';
+      const { supabaseResponse, user, hasCookiesSet } = await updateSession(request);
+      const redirectResponse = NextResponse.redirect(redirectUrl);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      if (user !== null || hasCookiesSet) {
+        redirectResponse.headers.set(
+          'Cache-Control',
+          'private, no-cache, no-store, max-age=0, must-revalidate'
+        );
+      }
+      return redirectResponse;
     }
     targetUrl = url;
   } else {

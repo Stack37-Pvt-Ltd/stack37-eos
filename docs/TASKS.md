@@ -42,7 +42,8 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 | **TASK-STAB-005A** | **Backend Integration Readiness**<br>Authoritative integration specification and API contracts. | Google Antigravity | P0 | **COMPLETED** | `docs/integration/backend_integration_readiness.md` |
 | **TASK-STAB-005B** | **Backend Safeguards & Memory Update**<br>Targeted security tests and project-memory synchronization. | Google Antigravity | P0 | **ACCEPTED** | `tests/unit/backend-security-safeguards.test.ts`<br>`docs/integration/*`<br>`docs/verification/*`<br>Project memory files |
 | **TASK-STAB-005C** | **Focused Backend Corrections**<br>Integrate approved Settings permission and Standard trial-plan corrections. | Antigravity author; Codex integration | P0 | **READY_FOR_REVIEW — INTEGRATED_LOCAL** | Two backend files, three unit-test files, corrections integration report |
-| **TASK-STAB-005** | **Integrated Verification**<br>Joint verification across backend safeguards and aligned UI; real database/authentication gates pending. | Joint (Antigravity + Codex) | P0 | **IN_PROGRESS — LOCAL PHASE ACCEPTED** | Local frontend/backend files, unit tests, governance and verification records |
+| **TASK-STAB-005** | **Integrated Verification**<br>Joint verification across backend safeguards and aligned UI; real database/authentication gates pending. | Joint (Antigravity + Codex) | P0 | **ACCEPTED — LOCAL-ONLY; REAL-SERVICE RELEASE GATE OPEN** | Local frontend/backend files, unit tests, governance and verification records |
+| **TASK-PROD-LOGIN-001** | **Production Login Screen & Central Routing**<br>Direct central portal root (`mybusiness.stack37.com/`) to `/login`, preserving tenant subdomain routing and direct `/registration`. | Joint (Backend: Antigravity; Frontend: Codex) | P0 | **READY_FOR_REVIEW — BACKEND ROUTING COMPLETE** | `src/proxy.ts`<br>`tests/unit/proxy-routing.test.ts` |
 
 *Note: Milestone 2 (Team Collaboration) and all ERP modules are blocked until Tasks STAB-001 through STAB-005 are accepted.*
 
@@ -188,7 +189,11 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 
 ### TASK-STAB-005: Integrated Verification
 * **Owner:** Joint (Google Antigravity + ChatGPT Codex)
-* **Status:** `IN_PROGRESS` overall; **local integration phase ACCEPTED** by CEO on October 14, 2026. Real database and authentication verification remains pending; no execution authorization is granted by local acceptance.
+* **Status:** `ACCEPTED — LOCAL-ONLY` following the CEO's approval of the local-only verification report on October 14, 2026. The earlier local integration phase was also ACCEPTED by the CEO. Real database and authentication verification remains a separate open release gate; local results must not be represented as real-service proof.
+* **Local-only verification claim (October 14, 2026):** The CEO directed Codex to finish the available TASK-STAB-005 checks in the local environment without using a staging or live database. Codex's declared file scope is `docs/TASKS.md`, `PROJECT_STATE.md`, and `docs/reviews/TASK-STAB-005/LOCAL-ONLY-VERIFICATION.md`, plus local review captures if needed. Runtime code, migrations, and the three dirty worktrees are outside this claim. This direction changes the current verification scope, not the evidence standard for real database and authentication behavior.
+* **Local-only completion evidence (October 14, 2026):** 194/194 unit tests across 13 files, TypeScript, scoped ESLint, production build, local HTTP 200 responses for login/register/confirmation pages, and `git diff --check` passed. Unscoped ESLint was interrupted during its nested-worktree scan and is not counted as passed. Browser automation was unavailable in this environment. The exact commands, results, limitations, and unchanged runtime boundary are in [LOCAL-ONLY-VERIFICATION.md](reviews/TASK-STAB-005/LOCAL-ONLY-VERIFICATION.md). No real database or authentication test was run. The report was handed off for CEO review and subsequently accepted as described below.
+* **CEO acceptance of local-only scope (October 14, 2026):** The CEO approved the local test report in this conversation. This accepts the completed local-only TASK-STAB-005 pass. Real database, authorization, authentication, transaction, and cross-subdomain checks remain a mandatory separate gate before commercial deployment. Acceptance does not authorize Migration 13, a deployment, or a new ERP task.
+* **Git record correction:** The accepted integration and corrections were later checkpointed in local commit `132e54a`. Earlier text below describing them as uncommitted is a historical account of the acceptance moment, not the current Git state. This verification pass made no commit or push.
 * **Scope:**
   - Integrate accepted TASK-STAB-004 frontend work and TASK-STAB-005B safeguard tests into a local branch.
   - Reconcile governance documentation while preserving accepted histories and decisions.
@@ -206,6 +211,26 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 * **Remaining gates / risks:** Real owner/user/organization authorization and deferred membership-ID hardening; subscription fallback, configured trial and entitlement/status verification; PostgreSQL RLS tenant isolation; provisioning rollback/constraint integrity; real authentication, email confirmation/recovery, subdomain cookies, organization switching, and Settings persistence. Details remain in `PROJECT_STATE.md` and the integration report. Prepare and authorize an isolated test environment and exact fixture cleanup before real database/authentication tests.
 * **Acceptance documentation scope:** Updated only `PROJECT_STATE.md`, `docs/TASKS.md`, and `docs/reviews/TASK-STAB-005/INTEGRATION-REPORT.md` to record this CEO decision. No runtime implementation or security-test assertion changes.
 * **Boundary:** Await separate CEO authorization. No commit, push, merge, rebase, deployment, production-service modification, deletion of either worktree, deferred hardening implementation, or unrelated changes.
+
+---
+
+### TASK-PROD-LOGIN-001: Production Login Screen & Central Routing
+* **Owner:** Joint (Google Antigravity: Backend Routing & Auth Contracts; ChatGPT Codex: Frontend Sign-in Experience)
+* **Status:** `READY_FOR_REVIEW — BACKEND ROUTING COMPLETE`
+* **Scope:**
+  - Update `src/proxy.ts` routing contract so that only the central `mybusiness.stack37.com/` (and local `mybusiness.localhost:3000/`) portal root redirects to `/login`.
+  - Preserve tenant subdomain routing (`<tenant>.stack37.com/*` -> `/tenant/<tenant>/*`).
+  - Preserve direct `/registration` and other shared auth routes (`/login`, `/register`, `/forgot-password`, `/reset-password`, etc.).
+  - Preserve session synchronization, refreshed cookies, and Cache-Control headers across root redirect.
+  - Implement comprehensive regression coverage in `tests/unit/proxy-routing.test.ts` (17 tests passing).
+  - Exclude UK Super scope and migrations 13–15 from this release (isolated in `.worktrees/uk-super-backend`).
+* **Expected Customer Result:** Visitors to `https://mybusiness.stack37.com/` seamlessly reach the official My Business sign-in experience at `/login`, while tenant organizations and direct registration paths operate undisturbed.
+* **Files Affected:** `src/proxy.ts`, `tests/unit/proxy-routing.test.ts`.
+* **Verification Evidence:**
+  - 198/198 unit tests passing across 13 test files (`npm run test:unit`).
+  - TypeScript typecheck passing with 0 errors (`npm run typecheck`).
+  - Scoped ESLint passing cleanly on touched files (`npx eslint src/proxy.ts tests/unit/proxy-routing.test.ts`).
+  - `git diff --check` clean.
 
 ---
 
