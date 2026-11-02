@@ -1,10 +1,10 @@
 # TASK-PROD-LOGIN-001 — Codex Frontend Handoff
 
-**Status:** `READY_FOR_REVIEW — FRONTEND PHASE; TEST BRANCH PUSHED, VERCEL BLOCKED`  
+**Status:** `READY_FOR_REVIEW — FRONTEND PHASE; TEST BRANCH PUSHED, VERCEL BLOCKED`
 **Date:** November 2, 2026 (Asia/Colombo)  
 **Workspace:** `C:\Users\nimth\Documents\Codex\task-prod-login-001`  
 **Baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6`  
-**Branch:** `codex/task-prod-login-001`  
+**Branch:** `codex/task-prod-login-001`
 **Implementation commit:** `b751787` — pushed to GitHub for a non-production preview
 
 ## Result
