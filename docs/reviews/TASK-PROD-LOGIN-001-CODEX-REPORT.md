@@ -1,10 +1,11 @@
 # TASK-PROD-LOGIN-001 — Codex Frontend Handoff
 
-**Status:** `READY_FOR_REVIEW — FRONTEND PHASE`  
+**Status:** `READY_FOR_REVIEW — FRONTEND PHASE; TEST BRANCH PUSHED, VERCEL BLOCKED`  
 **Date:** November 2, 2026 (Asia/Colombo)  
 **Workspace:** `C:\Users\nimth\Documents\Codex\task-prod-login-001`  
 **Baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6`  
-**Branch:** `codex/task-prod-login-001` (local, no commit)
+**Branch:** `codex/task-prod-login-001`  
+**Implementation commit:** `b751787` — pushed to GitHub for a non-production preview
 
 ## Result
 
@@ -40,6 +41,8 @@ No authentication action, proxy, Supabase logic, database schema, RLS, migration
 | Built login markup | PASS — generated `/login` HTML contains “Sign in” and the STACK37 logo |
 | Local runtime `/login` | BLOCKED — root/proxy routing runs first; local snapshot has no `.env.local` Supabase config |
 | Local runtime central `/` | NOT PASSING on this unintegrated baseline — `src/proxy.ts` rewrites it to `/registration`; request returned 500 because Supabase environment is absent |
+| GitHub Vercel check | FAIL — Vercel returned its account deployment-blocked status |
+| Vercel preview deployment | NOT CREATED — no deployment record or test URL exists for this branch |
 | Public production URL | NOT CHECKED — no deployment or production request was authorized |
 
 The default Turbopack build was also attempted and failed when its worker process could not start in the sandbox. Webpack build succeeded after workspace access was authorized. No authentication or write-action request was sent to Supabase.
@@ -63,4 +66,4 @@ No backend file was imported or edited. A separate CEO-authorized local integrat
 
 ## Release boundary
 
-No commits, pushes, merges, rebases, migrations, live database changes, production changes, or deployments were performed. The original source worktrees were not modified. This frontend phase is ready for CEO review; stop here pending the next authorization.
+The CEO authorized a test push. Only this isolated login-only diff was committed as `b751787` and pushed to `codex/task-prod-login-001`. No push to `main`, production deployment, promotion, merge, migration, live database change, or production request was performed. The original source worktree, including its UK Super uncommitted changes, was not modified. Vercel's account deployment-blocked gate prevented creation of a preview deployment. This frontend phase remains ready for CEO review; stop here pending the account block resolution and the separate proxy integration.

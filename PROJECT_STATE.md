@@ -3,8 +3,8 @@
 **Last updated:** November 2, 2026 (Asia/Colombo)
 **Branch:** `codex/task-prod-login-001` (local isolated snapshot)
 **Committed baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6`
-**Current task:** `TASK-PROD-LOGIN-001` — Codex frontend phase READY_FOR_REVIEW in an isolated snapshot. Antigravity's central-host `/` → `/login` proxy correction remains separate and uncommitted. Current baseline still rewrites that host's root to `/registration`; combined root behavior is not verified until the backend-owned change is integrated under separate authorization. No UK Super files, migrations, commits, pushes, or deployments are part of this task.
-**Evidence:** 195/195 unit tests, TypeScript, ESLint, production build and `git diff --check` pass in the isolated snapshot. Built login HTML contains the approved sign-in screen and logo. Direct runtime route requests and root redirect are not verified because this isolated snapshot has no Supabase environment and lacks Antigravity's proxy correction; no production request was made.
+**Current task:** `TASK-PROD-LOGIN-001` — frontend changes pushed to `codex/task-prod-login-001` for preview testing at commit `b751787`. Antigravity's central-host `/` → `/login` proxy correction remains separate and uncommitted. Current baseline still rewrites that host's root to `/registration`; combined root behavior is not verified until the backend-owned change is integrated under separate authorization. No UK Super files, migrations, production branch changes, or production deployments are part of this task.
+**Evidence:** 195/195 unit tests, TypeScript, ESLint, production build and `git diff --check` pass in the isolated snapshot. Built login HTML contains the approved sign-in screen and logo. Direct runtime route requests and root redirect are not verified because this isolated snapshot has no Supabase environment and lacks Antigravity's proxy correction. Vercel reports the preview check failed at its account deployment-blocked gate; no preview URL was created and no production request was made.
 
 ---
 
