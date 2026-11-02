@@ -43,6 +43,7 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 | **TASK-STAB-005B** | **Backend Safeguards & Memory Update**<br>Targeted security tests and project-memory synchronization. | Google Antigravity | P0 | **ACCEPTED** | `tests/unit/backend-security-safeguards.test.ts`<br>`docs/integration/*`<br>`docs/verification/*`<br>Project memory files |
 | **TASK-STAB-005C** | **Focused Backend Corrections**<br>Integrate approved Settings permission and Standard trial-plan corrections. | Antigravity author; Codex integration | P0 | **READY_FOR_REVIEW — INTEGRATED_LOCAL** | Two backend files, three unit-test files, corrections integration report |
 | **TASK-STAB-005** | **Integrated Verification**<br>Joint verification across backend safeguards and aligned UI; real database/authentication gates pending. | Joint (Antigravity + Codex) | P0 | **IN_PROGRESS — LOCAL PHASE ACCEPTED** | Local frontend/backend files, unit tests, governance and verification records |
+| **TASK-PROD-LOGIN-001** | **Central Production Login Portal**<br>Replace starter landing page with the approved sign-in experience. | ChatGPT Codex (frontend; Antigravity routing contract) | P0 | **READY_FOR_REVIEW — FRONTEND PHASE** | root redirect, local Geist fonts, route test, task/state/review records |
 
 *Note: Milestone 2 (Team Collaboration) and all ERP modules are blocked until Tasks STAB-001 through STAB-005 are accepted.*
 
@@ -209,6 +210,15 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 
 ---
 
+### TASK-PROD-LOGIN-001: Central Production Login Portal
+* **Owner:** Joint (Antigravity owns central-host proxy routing; Codex owns the sign-in UI and frontend fallback).
+* **Status:** `READY_FOR_REVIEW — FRONTEND PHASE`, explicitly authorized by the CEO on November 2, 2026. No Git synchronization, deployment, or database changes authorized by this claim.
+* **Expected Customer Result:** Visiting `https://mybusiness.stack37.com/` reaches the approved STACK37 sign-in screen; direct `/login` remains functional.
+* **Integration contract:** Antigravity's handoff reports that the central `mybusiness` root redirects to `/login`, preserving query parameters and refreshed cookies, while tenant subdomain roots continue rewriting to `/tenant/[tenantSlug]`. The backend-owned `src/proxy.ts` is not part of Codex's change scope.
+* **Declared Codex file scope:** `src/app/page.tsx`, `src/app/layout.tsx`, `src/app/fonts/*`, a focused frontend unit test, this task record, `PROJECT_STATE.md`, and `docs/reviews/TASK-PROD-LOGIN-001-CODEX-REPORT.md`. No proxy, auth action, database, migration, or UK Super file is in scope.
+* **Acceptance criteria:** (1) Root page redirects with Next.js `redirect('/login')`; (2) existing login page and auth actions remain unchanged; (3) focused test, full unit suite, typecheck, lint, and production build pass; (4) built `/login` output contains the approved sign-in experience; (5) no UK Super changes or migrations are included; (6) work stops locally at `READY_FOR_REVIEW`.
+* **Handoff:** Antigravity's proxy fix remains uncommitted in its source worktree. This source snapshot's current `src/proxy.ts` still rewrites `mybusiness` root to `/registration`, so it intercepts `/` before the new page redirect. A local request using this proxy also reached `/registration` and returned 500 because this isolated copy has no Supabase environment. `/login` HTML was verified in the production build output, but runtime root/login behavior is pending approved local integration of Antigravity's proxy change and an isolated authentication configuration. This Codex snapshot does not copy or edit backend-owned files.
+* **Codex evidence (November 2, 2026):** 195/195 unit tests across 14 files, typecheck, ESLint, production webpack build, and `git diff --check` passed. Next/Turbopack build was separately attempted but failed while spawning a child process under the sandbox; webpack build passed with authorized workspace access. No production URL, live authentication, shared database, commit, push, migration, or deployment was used. See [Codex report](reviews/TASK-PROD-LOGIN-001-CODEX-REPORT.md).
 ## 4. Completed Task History Archive
 
 ### TASK-HIST-005: Business Setup & Headquarters Configuration (Phase 3C.3)

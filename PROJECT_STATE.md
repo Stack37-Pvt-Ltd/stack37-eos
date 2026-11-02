@@ -1,10 +1,10 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
-**Last updated:** October 14, 2026 (Asia/Colombo)
-**Branch:** `codex/task-stab-005-integration` (local, based on `d17ed63a48e2313df0f5406d9074f9076b788721`)
-**Committed baseline:** `d17ed63a48e2313df0f5406d9074f9076b788721`
-**Current task:** `TASK-STAB-005` — IN_PROGRESS; prior local integration ACCEPTED, TASK-STAB-005C corrections integrated locally and READY_FOR_REVIEW; real database/authentication verification DEFERRED / NOT EXECUTED
-**Evidence:** Prior CEO-accepted 189-test integration; combined corrections now pass 194 unit tests, TypeScript and ESLint, with mocked browser workflow checks; no commit or deployment
+**Last updated:** November 2, 2026 (Asia/Colombo)
+**Branch:** `codex/task-prod-login-001` (local isolated snapshot)
+**Committed baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6`
+**Current task:** `TASK-PROD-LOGIN-001` — Codex frontend phase READY_FOR_REVIEW in an isolated snapshot. Antigravity's central-host `/` → `/login` proxy correction remains separate and uncommitted. Current baseline still rewrites that host's root to `/registration`; combined root behavior is not verified until the backend-owned change is integrated under separate authorization. No UK Super files, migrations, commits, pushes, or deployments are part of this task.
+**Evidence:** 195/195 unit tests, TypeScript, ESLint, production build and `git diff --check` pass in the isolated snapshot. Built login HTML contains the approved sign-in screen and logo. Direct runtime route requests and root redirect are not verified because this isolated snapshot has no Supabase environment and lacks Antigravity's proxy correction; no production request was made.
 
 ---
 
@@ -37,11 +37,13 @@ TASK-STAB-004 adds a local visual implementation for existing workflows. It pres
 
 Independent VAT and SSCL settings, team management, ERP operations, subscription checkout, and trial-expiry enforcement remain outside this implementation and are not represented as completed.
 
-## Current working tree
+## Current working tree in the original TASK-STAB-005 snapshot
 
 Changes are local and uncommitted on `codex/task-stab-005-integration`; baseline `d17ed63a48e2313df0f5406d9074f9076b788721` is unchanged. Separate verified file snapshots of TASK-STAB-004 and TASK-STAB-005B were created under `%TEMP%\STACK37-EOS-TASK-STAB-005-checkpoint-d75b476588e94232a867fceac526991e`; manifests and SHA-256 hashes are recorded in the TASK-STAB-005 integration report. The UI implementation is preserved. The 19 backend safeguard unit tests and checkpointed Version 1.0 verification plan are present in the main project. Four shared governance files were reconciled manually. Codex did not write to Antigravity's worktree. Its revised Version 2.0 plan remains a separate pending proposal at `.worktrees/backend-safeguards/docs/verification/TASK-STAB-005_backend_verification_plan.md`, as directed by the CEO; it has not replaced the integrated Version 1.0 or received execution authorization in this task.
 
 The initial accepted integration did not change backend runtime behavior. The subsequent CEO-authorized TASK-STAB-005C integration imports only Antigravity's corrections in `src/lib/auth/business-config.ts` and `src/lib/actions/organization.ts`, plus three supporting unit-test files. The frontend, authentication, settings write actions, tenant guard, proxy, validations, migrations, database and live services are preserved. A further verified checkpoint of both worktrees precedes this import; see [corrections integration report](docs/reviews/TASK-STAB-005/CORRECTIONS-INTEGRATION-REPORT.md).
+
+TASK-PROD-LOGIN-001 frontend changes are recorded separately in the isolated `codex/task-prod-login-001` snapshot. They are additive and do not replace or synchronize the original TASK-STAB-005 worktree described above.
 
 ## Verification
 
