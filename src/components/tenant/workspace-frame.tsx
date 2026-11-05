@@ -18,7 +18,7 @@ export function WorkspaceFrame({ children, organization, organizations, host, em
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-3">Skip to content</a>
       <header className="app-header">
         <div className="app-container flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-          <Brand compact />
+          <Brand href={`/w/${encodeURIComponent(organization.slug)}`} compact />
           <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
             <OrganizationSwitcher currentSlug={organization.slug} currentOrgName={organization.name} organizations={organizations} currentHost={host} />
           </div>
@@ -31,7 +31,7 @@ export function WorkspaceFrame({ children, organization, organizations, host, em
           </div>
         </div>
       </header>
-      <WorkspaceNavigation />
+      <WorkspaceNavigation tenantSlug={organization.slug} />
       <main id="main-content" className="app-container py-8 sm:py-10">{children}</main>
     </div>
   );

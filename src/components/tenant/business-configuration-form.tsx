@@ -25,6 +25,8 @@ import {
 } from '../../lib/validations/organization';
 import type { BusinessConfigurationData } from '../../lib/auth/business-config';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 interface BusinessConfigurationFormProps {
   initialData: BusinessConfigurationData;
 }
@@ -37,7 +39,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
     name: initialData.organization.name || '',
     legalName: initialData.organization.legalName || '',
     registrationNumber: initialData.organization.registrationNumber || '',
-    categoryId: initialData.organization.categoryId || '',
+    categoryId: UUID_PATTERN.test(initialData.organization.categoryId || '') ? initialData.organization.categoryId || '' : '',
     contactEmail: initialData.organization.contactEmail || '',
     contactPhone: initialData.organization.contactPhone || '',
     website: initialData.organization.website || '',
@@ -76,6 +78,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
   const isSavingBranchRef = React.useRef(false);
 
   const canEdit = initialData.canEdit;
+  const categoryOptions = initialData.categories.filter((category) => UUID_PATTERN.test(category.id));
 
   async function handleSaveBusiness(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +96,9 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
         name: profile.name,
         legalName: profile.legalName,
         registrationNumber: profile.registrationNumber,
-        categoryId: profile.categoryId,
+        categoryId: categoryOptions.length === 0
+          ? (UUID_PATTERN.test(initialData.organization.categoryId || '') ? initialData.organization.categoryId || '' : '')
+          : profile.categoryId,
         contactEmail: profile.contactEmail,
         contactPhone: profile.contactPhone,
         website: profile.website,
@@ -306,7 +311,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     id="name"
                     type="text"
                     required
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.name}
                     onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -322,12 +327,11 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Workspace address
                   </label>
-                  <div className="flex items-center rounded-none border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-600 select-all">
-                    <span>{initialData.organization.slug}</span>
-                    <span className="text-slate-500">.stack37.com</span>
+                  <div className="flex min-w-0 items-center rounded-none border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-600 select-all">
+                    <span className="break-all">https://mybusiness.stack37.com/w/{initialData.organization.slug}</span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
-                    Your workspace address is permanent.
+                    Permanent workspace path on the centralized STACK37 portal.
                   </p>
                 </div>
 
@@ -339,7 +343,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   <input
                     id="legalName"
                     type="text"
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.legalName}
                     onChange={(e) => setProfile({ ...profile, legalName: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -358,7 +362,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   <input
                     id="registrationNumber"
                     type="text"
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.registrationNumber}
                     onChange={(e) => setProfile({ ...profile, registrationNumber: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
@@ -376,18 +380,25 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   </label>
                   <select
                     id="categoryId"
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.categoryId}
                     onChange={(e) => setProfile({ ...profile, categoryId: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
                   >
-                    <option value="">Select industry</option>
-                    {initialData.categories.map((cat) => (
+                    <option value="">{categoryOptions.length > 0 ? 'Select industry' : 'Category options unavailable'}</option>
+                    {categoryOptions.map((cat) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name} {cat.description ? `— ${cat.description}` : ''}
                       </option>
                     ))}
                   </select>
+                  {categoryOptions.length === 0 && (
+                    <p role="status" className="mt-2 text-xs leading-5 text-amber-800">
+                      {initialData.hasCategoriesError
+                        ? 'Unable to load industry categories at this time. Category changes are temporarily disabled.'
+                        : 'Industry categories are unavailable from this environment. Category changes are disabled until valid categories are provided.'}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -414,7 +425,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="contactEmail"
                       type="email"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.contactEmail}
                       onChange={(e) => setProfile({ ...profile, contactEmail: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -435,7 +446,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="contactPhone"
                       type="tel"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.contactPhone}
                       onChange={(e) => setProfile({ ...profile, contactPhone: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -456,7 +467,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="website"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.website}
                       onChange={(e) => setProfile({ ...profile, website: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 pl-9 pr-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -482,7 +493,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="addressLine1"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.addressLine1}
                       onChange={(e) => setProfile({ ...profile, addressLine1: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -497,7 +508,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="addressLine2"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.addressLine2}
                       onChange={(e) => setProfile({ ...profile, addressLine2: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -512,7 +523,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="city"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.city}
                       onChange={(e) => setProfile({ ...profile, city: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -527,7 +538,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="stateProvince"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.stateProvince}
                       onChange={(e) => setProfile({ ...profile, stateProvince: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -542,7 +553,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="postalCode"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={profile.postalCode}
                       onChange={(e) => setProfile({ ...profile, postalCode: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
@@ -580,7 +591,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   <select
                     id="currency"
                     required
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.currency}
                     onChange={(e) => setProfile({ ...profile, currency: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
@@ -615,7 +626,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   <select
                     id="timezone"
                     required
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.timezone}
                     onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
@@ -643,7 +654,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   <input
                     id="taxId"
                     type="text"
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.taxId}
                     onChange={(e) => setProfile({ ...profile, taxId: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
@@ -661,7 +672,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   </label>
                   <select
                     id="taxStatus"
-                    disabled={!canEdit}
+                    disabled={!canEdit || categoryOptions.length === 0}
                     value={profile.taxStatus}
                     onChange={(e) => setProfile({ ...profile, taxStatus: e.target.value })}
                     className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 capitalize"
@@ -671,6 +682,13 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <option value="exempt">Tax-Exempt Entity</option>
                     <option value="simplified">Simplified / Small Enterprise Scheme</option>
                   </select>
+                  {categoryOptions.length === 0 && (
+                    <p role="status" className="mt-2 text-xs leading-5 text-amber-800">
+                      {initialData.hasCategoriesError
+                        ? 'Unable to load industry categories at this time. Category changes are temporarily disabled.'
+                        : 'Industry categories are unavailable from this environment. Category changes are disabled until valid categories are provided.'}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -724,7 +742,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                   id="branchName"
                   type="text"
                   required
-                  disabled={!canEdit}
+                  disabled={!canEdit || categoryOptions.length === 0}
                   value={branch.name}
                   onChange={(e) => setBranch({ ...branch, name: e.target.value })}
                   className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -743,7 +761,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                 <input
                   id="branchCode"
                   type="text"
-                  disabled={!canEdit}
+                  disabled={!canEdit || categoryOptions.length === 0}
                   value={branch.code}
                   onChange={(e) => setBranch({ ...branch, code: e.target.value })}
                   className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"
@@ -762,7 +780,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                 <input
                   id="branchPhone"
                   type="tel"
-                  disabled={!canEdit}
+                  disabled={!canEdit || categoryOptions.length === 0}
                   value={branch.contactPhone}
                   onChange={(e) => setBranch({ ...branch, contactPhone: e.target.value })}
                   className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -778,7 +796,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                 <input
                   id="branchEmail"
                   type="email"
-                  disabled={!canEdit}
+                  disabled={!canEdit || categoryOptions.length === 0}
                   value={branch.contactEmail}
                   onChange={(e) => setBranch({ ...branch, contactEmail: e.target.value })}
                   className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -799,7 +817,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="bAddressLine1"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={branch.addressLine1}
                       onChange={(e) => setBranch({ ...branch, addressLine1: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -814,7 +832,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="bCity"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={branch.city}
                       onChange={(e) => setBranch({ ...branch, city: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
@@ -829,7 +847,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
                     <input
                       id="bPostalCode"
                       type="text"
-                      disabled={!canEdit}
+                      disabled={!canEdit || categoryOptions.length === 0}
                       value={branch.postalCode}
                       onChange={(e) => setBranch({ ...branch, postalCode: e.target.value })}
                       className="w-full text-xs rounded-none border border-slate-200 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500 font-mono"

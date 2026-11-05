@@ -482,11 +482,19 @@ describe('Phase 3A.5 — Cloud Authentication Integration Tests', () => {
     const directRes = await proxy(directReq);
     expect(directRes.status).toBe(404);
 
-    // 2. Request through actual tenant hostname http://[tenant-slug].localhost:3000/
-    const tenantHostnameReq = new NextRequest(`http://${orgASlug}.localhost:3000/`, {
+    // 2. Request through legacy tenant hostname http://[tenant-slug].localhost:3000/ redirects to /w/:slug
+    const legacyHostnameReq = new NextRequest(`http://${orgASlug}.localhost:3000/`, {
       headers: { host: `${orgASlug}.localhost:3000` },
     });
-    const tenantRes = await proxy(tenantHostnameReq);
+    const legacyRes = await proxy(legacyHostnameReq);
+    expect(legacyRes.status).toBe(308);
+    expect(legacyRes.headers.get('location')).toBe(`http://mybusiness.localhost:3000/w/${orgASlug}`);
+
+    // 3. Request through canonical workspace URL http://mybusiness.localhost:3000/w/[tenant-slug]
+    const tenantWorkspaceReq = new NextRequest(`http://mybusiness.localhost:3000/w/${orgASlug}`, {
+      headers: { host: 'mybusiness.localhost:3000' },
+    });
+    const tenantRes = await proxy(tenantWorkspaceReq);
 
     // Proxy rewrites to internal tenant route with sanitized tenant slug header
     expect(tenantRes.status).toBe(200);

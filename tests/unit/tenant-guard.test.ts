@@ -228,12 +228,12 @@ describe('Server-Side Tenant Membership Guard & Multi-Organization Management', 
   describe('getTenantWorkspaceUrl', () => {
     it('constructs correct local URL preserving port for local testing', () => {
       const url = getTenantWorkspaceUrl('acmecorp', 'mybusiness.localhost:3000');
-      expect(url).toBe('http://acmecorp.localhost:3000/');
+      expect(url).toBe('http://mybusiness.localhost:3000/w/acmecorp');
     });
 
-    it('constructs correct production subdomain URL for stack37.com', () => {
+    it('constructs correct production portal URL for stack37.com', () => {
       const url = getTenantWorkspaceUrl('acmecorp', 'mybusiness.stack37.com');
-      expect(url).toBe('https://acmecorp.stack37.com/');
+      expect(url).toBe('https://mybusiness.stack37.com/w/acmecorp');
     });
   });
 });

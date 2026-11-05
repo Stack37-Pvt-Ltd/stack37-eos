@@ -9,6 +9,9 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     vi.restoreAllMocks();
   });
 
+  // =========================================================================
+  // 1. Central Portal Root Redirection
+  // =========================================================================
   it('redirects central mybusiness portal root (mybusiness.localhost:3000/) to /login', async () => {
     const req = new NextRequest('http://mybusiness.localhost:3000/', {
       headers: { host: 'mybusiness.localhost:3000' },
@@ -30,13 +33,13 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
   });
 
   it('preserves query parameters when redirecting central mybusiness portal root to /login', async () => {
-    const req = new NextRequest('https://mybusiness.stack37.com/?returnUrl=%2Ftenant%2Facme', {
+    const req = new NextRequest('https://mybusiness.stack37.com/?next=%2Fw%2Ftest', {
       headers: { host: 'mybusiness.stack37.com' },
     });
     const res = await proxy(req);
 
     expect(res.status).toBe(307);
-    expect(res.headers.get('location')).toBe('https://mybusiness.stack37.com/login?returnUrl=%2Ftenant%2Facme');
+    expect(res.headers.get('location')).toBe('https://mybusiness.stack37.com/login?next=%2Fw%2Ftest');
   });
 
   it('preserves Set-Cookie and applies private Cache-Control when session refreshes during root redirect', async () => {
@@ -68,29 +71,101 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     expect(res.headers.get('Cache-Control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
   });
 
-  it('preserves tenant subdomain root routing to /tenant/[tenantSlug] and does not redirect to /login', async () => {
-    const req = new NextRequest('http://acmecorp.localhost:3000/', {
-      headers: { host: 'acmecorp.localhost:3000' },
+  // =========================================================================
+  // 2. Collision-Safe Workspace Routing (/w/:tenantSlug/...)
+  // =========================================================================
+  it('redirects /w and /w/ on mybusiness to /select-organization', async () => {
+    for (const p of ['/w', '/w/']) {
+      const req = new NextRequest(`http://mybusiness.localhost:3000${p}`, {
+        headers: { host: 'mybusiness.localhost:3000' },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/select-organization');
+    }
+  });
+
+  it('rewrites /w/:tenantSlug to /tenant/:tenantSlug and sets x-pathname and x-tenant-slug headers', async () => {
+    const req = new NextRequest('http://mybusiness.localhost:3000/w/test', {
+      headers: { host: 'mybusiness.localhost:3000' },
     });
     const res = await proxy(req);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/acmecorp');
-    expect(res.headers.get('location')).toBeNull();
+    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/test');
+    expect(req.headers.get('x-pathname')).toBe('/w/test');
+    expect(req.headers.get('x-tenant-slug')).toBe('test');
   });
 
-  it('rewrites tenant subdomain to /tenant/[tenantSlug]', async () => {
-    const req = new NextRequest('http://acmecorp.localhost:3000/dashboard', {
-      headers: { host: 'acmecorp.localhost:3000' },
+  it('rewrites /w/:tenantSlug/settings to /tenant/:tenantSlug/settings and sets x-pathname header', async () => {
+    const req = new NextRequest('http://mybusiness.localhost:3000/w/test/settings', {
+      headers: { host: 'mybusiness.localhost:3000' },
     });
     const res = await proxy(req);
 
     expect(res.status).toBe(200);
-    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/acmecorp/dashboard');
+    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/test/settings');
+    expect(req.headers.get('x-pathname')).toBe('/w/test/settings');
+    expect(req.headers.get('x-tenant-slug')).toBe('test');
   });
 
-  it('routes shared auth paths (/login, /register, /auth/callback, /auth/confirm, /forgot-password, /reset-password, /verify-email, /select-organization) on mybusiness', async () => {
-    const authPaths = ['/login', '/register', '/auth/callback', '/auth/confirm', '/forgot-password', '/reset-password', '/verify-email', '/select-organization'];
+  it('normalizes trailing slash on /w/:tenantSlug/ to /tenant/:tenantSlug', async () => {
+    const req = new NextRequest('http://mybusiness.localhost:3000/w/test/', {
+      headers: { host: 'mybusiness.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/test');
+  });
+
+  it('normalizes uppercase or mixed-case slug /w/TestOrg to /w/testorg with 308 redirect', async () => {
+    const req = new NextRequest('http://mybusiness.localhost:3000/w/TestOrg/settings', {
+      headers: { host: 'mybusiness.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/w/testorg/settings');
+  });
+
+  it('blocks invalid tenant slugs under /w/ with 404', async () => {
+    const invalidSlugs = ['ab', '-leading-hyphen', 'trailing-hyphen-', 'double--hyphen', 'special$char', 'a'.repeat(64)];
+    for (const slug of invalidSlugs) {
+      const req = new NextRequest(`http://mybusiness.localhost:3000/w/${slug}`, {
+        headers: { host: 'mybusiness.localhost:3000' },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(404);
+    }
+  });
+
+  it('blocks reserved slugs under /w/ with 404 (e.g. /w/admin, /w/billing)', async () => {
+    const reservedSlugs = ['admin', 'api', 'app', 'auth', 'billing', 'support', 'www', 'mybusiness', 'portal', 'status'];
+    for (const slug of reservedSlugs) {
+      const req = new NextRequest(`http://mybusiness.localhost:3000/w/${slug}`, {
+        headers: { host: 'mybusiness.localhost:3000' },
+      });
+      const res = await proxy(req);
+      expect(res.status).toBe(404);
+    }
+  });
+
+  // =========================================================================
+  // 3. Shared Auth Routes on Canonical Portal
+  // =========================================================================
+  it('routes shared auth paths (/login, /register, /auth/callback, /auth/confirm, /forgot-password, /reset-password, /verify-email, /select-organization, /registration) on mybusiness', async () => {
+    const authPaths = [
+      '/login',
+      '/register',
+      '/auth/callback',
+      '/auth/confirm',
+      '/forgot-password',
+      '/reset-password',
+      '/verify-email',
+      '/select-organization',
+      '/registration',
+    ];
     for (const p of authPaths) {
       const req = new NextRequest(`http://mybusiness.localhost:3000${p}`, {
         headers: { host: 'mybusiness.localhost:3000' },
@@ -98,20 +173,106 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
       const res = await proxy(req);
       expect(res.status).toBe(200);
       expect(res.headers.get('x-middleware-rewrite')).toContain(p);
-      expect(res.headers.get('x-middleware-rewrite')).not.toContain('/registration');
+      expect(res.headers.get('x-middleware-rewrite')).not.toContain('/tenant/');
     }
   });
 
-  it('routes shared auth paths (/login, /auth/callback) on tenant subdomains', async () => {
+  // =========================================================================
+  // 4. Legacy Subdomain Forwarding & Token Protection
+  // =========================================================================
+  it('redirects legacy tenant subdomain root (acmecorp.localhost:3000/) to /w/acmecorp on mybusiness', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/w/acmecorp');
+  });
+
+  it('redirects legacy tenant subdomain deep link (acmecorp.localhost:3000/dashboard) to /w/acmecorp/dashboard on mybusiness', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/dashboard', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/w/acmecorp/dashboard');
+  });
+
+  it('redirects legacy tenant subdomain in production (test.stack37.com/settings) to https://mybusiness.stack37.com/w/test/settings', async () => {
+    const req = new NextRequest('https://test.stack37.com/settings', {
+      headers: { host: 'test.stack37.com' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('https://mybusiness.stack37.com/w/test/settings');
+  });
+
+  it('neutralizes auth callback endpoints on legacy subdomain with 307 redirect without forwarding code or tokens', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/auth/callback?code=sensitive-pkce-code&state=xyz', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location') || '';
+    expect(location).toBe('http://mybusiness.localhost:3000/login?error=auth_callback_host_mismatch');
+    expect(location).not.toContain('sensitive-pkce-code');
+    expect(location).not.toContain('xyz');
+  });
+
+  it('redirects legacy subdomain /login to central /login?next=/w/:subdomain', async () => {
     const req = new NextRequest('http://acmecorp.localhost:3000/login', {
       headers: { host: 'acmecorp.localhost:3000' },
     });
     const res = await proxy(req);
-    expect(res.status).toBe(200);
-    expect(res.headers.get('x-middleware-rewrite')).toContain('/login');
-    expect(res.headers.get('x-middleware-rewrite')).not.toContain('/tenant/acmecorp/login');
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/login?next=/w/acmecorp');
   });
 
+  it('redirects shared auth paths (/registration) on legacy tenant subdomain to canonical portal domain', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/registration', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/registration');
+  });
+
+  it('strips sensitive tokens (code, token_hash, access_token) from query parameters when redirecting legacy subdomain', async () => {
+    const req = new NextRequest(
+      'http://acmecorp.localhost:3000/settings?tab=general&code=leak-me&token_hash=hash-leak&access_token=jwt-leak',
+      {
+        headers: { host: 'acmecorp.localhost:3000' },
+      }
+    );
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    const location = res.headers.get('location') || '';
+    expect(location).toContain('/w/acmecorp/settings?tab=general');
+    expect(location).not.toContain('leak-me');
+    expect(location).not.toContain('hash-leak');
+    expect(location).not.toContain('jwt-leak');
+  });
+
+  it('preserves safe query parameters (tab=general) when redirecting legacy subdomain', async () => {
+    const req = new NextRequest('http://acmecorp.localhost:3000/settings?tab=security&mode=compact', {
+      headers: { host: 'acmecorp.localhost:3000' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(308);
+    expect(res.headers.get('location')).toBe('http://mybusiness.localhost:3000/w/acmecorp/settings?tab=security&mode=compact');
+  });
+
+  // =========================================================================
+  // 5. Security & Boundary Protections
+  // =========================================================================
   it('blocks reserved subdomains (admin, www, api, app, auth) with 404', async () => {
     const reserved = ['admin', 'www', 'api', 'app', 'auth'];
     for (const sub of reserved) {
@@ -124,33 +285,11 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
   });
 
   it('blocks direct access to internal /tenant routes with 404', async () => {
-    const req = new NextRequest('http://acmecorp.localhost:3000/tenant/acmecorp', {
-      headers: { host: 'acmecorp.localhost:3000' },
-    });
-    const res = await proxy(req);
-    expect(res.status).toBe(404);
-  });
-
-  it('routes /registration on mybusiness.localhost without 404 or duplicated path prefix', async () => {
-    const req = new NextRequest('http://mybusiness.localhost:3000/registration', {
+    const req = new NextRequest('http://mybusiness.localhost:3000/tenant/acmecorp', {
       headers: { host: 'mybusiness.localhost:3000' },
     });
     const res = await proxy(req);
-    expect(res.status).toBe(200);
-    const rewriteHeader = res.headers.get('x-middleware-rewrite');
-    expect(rewriteHeader).toContain('/registration');
-    expect(rewriteHeader).not.toContain('/registration/registration');
-  });
-
-  it('routes /registration on tenant subdomains directly without tenant prefix collision', async () => {
-    const req = new NextRequest('http://acmecorp.localhost:3000/registration', {
-      headers: { host: 'acmecorp.localhost:3000' },
-    });
-    const res = await proxy(req);
-    expect(res.status).toBe(200);
-    const rewriteHeader = res.headers.get('x-middleware-rewrite');
-    expect(rewriteHeader).toContain('/registration');
-    expect(rewriteHeader).not.toContain('/tenant/acmecorp/registration');
+    expect(res.status).toBe(404);
   });
 
   it('blocks root host without subdomain with 404', async () => {
@@ -171,7 +310,7 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
   });
 
   it('sanitizes client-supplied x-tenant-slug header to prevent spoofing', async () => {
-    const req = new NextRequest('http://mybusiness.localhost:3000/', {
+    const req = new NextRequest('http://mybusiness.localhost:3000/login', {
       headers: {
         host: 'mybusiness.localhost:3000',
         'x-tenant-slug': 'attacker-spoofed-slug',
@@ -179,7 +318,6 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     });
 
     await proxy(req);
-    // Verify client-supplied header was removed from request headers
     expect(req.headers.get('x-tenant-slug')).toBeNull();
   });
 
@@ -206,13 +344,8 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
 
     const res = await proxy(req);
 
-    // 1. Response contains Set-Cookie header for browser
     expect(res.cookies.get('sb-access-token')?.value).toBe('fresh-jwt-token');
-
-    // 2. Downstream request headers have updated cookie header
     expect(req.headers.get('cookie')).toContain('sb-access-token=fresh-jwt-token');
-
-    // 3. Cache-Control protection is applied
     expect(res.headers.get('Cache-Control')).toBe('private, no-cache, no-store, max-age=0, must-revalidate');
   });
 

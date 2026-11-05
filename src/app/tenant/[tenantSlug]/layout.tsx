@@ -24,7 +24,9 @@ export default async function TenantLayout(props: {
   params: Promise<{ tenantSlug: string }>;
 }) {
   const params = await props.params;
-  const access = await requireTenantAccess(params.tenantSlug);
+  const headerList = await headers();
+  const currentPath = headerList.get('x-pathname') || `/w/${params.tenantSlug}`;
+  const access = await requireTenantAccess(params.tenantSlug, currentPath);
 
   if (!access.authorized) {
     if (access.reason === 'unauthenticated') {
@@ -51,7 +53,6 @@ export default async function TenantLayout(props: {
 
   const { organization, membership, user } = access.context;
   const userOrganizations = await getUserOrganizations();
-  const headerList = await headers();
   const currentHost = headerList.get('host') || '';
 
   async function handleSignOut() {

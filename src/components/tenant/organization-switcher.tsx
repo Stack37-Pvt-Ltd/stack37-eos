@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { Building2, Check, ChevronsUpDown, ExternalLink, Plus } from 'lucide-react';
-import { UserOrganization, getTenantWorkspaceUrl } from '../../lib/auth/tenant-utils';
+import { UserOrganization } from '../../lib/auth/tenant-utils';
 
 export interface OrganizationSwitcherProps {
   currentSlug: string;
@@ -16,7 +16,6 @@ export function OrganizationSwitcher({
   currentSlug,
   currentOrgName,
   organizations,
-  currentHost = '',
 }: OrganizationSwitcherProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -70,7 +69,7 @@ export function OrganizationSwitcher({
           <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
             {organizations.map((org) => {
               const isCurrent = org.slug === currentSlug;
-              const targetUrl = getTenantWorkspaceUrl(org.slug, currentHost);
+              const targetUrl = `/w/${encodeURIComponent(org.slug)}`;
 
               return (
                 <a

@@ -8,16 +8,14 @@ export interface UserOrganization {
 }
 
 /**
- * Constructs cross-subdomain workspace URLs for organization switching.
+ * Constructs canonical portal workspace URLs for organization switching.
  * Client-safe utility function with no server-only dependencies.
  */
 export function getTenantWorkspaceUrl(slug: string, currentHost = ''): string {
-  const cleanHost = currentHost.split(':')[0] || 'localhost';
-  const port = currentHost.includes(':') ? `:${currentHost.split(':')[1]}` : '';
-  const isLocal = cleanHost.endsWith('localhost') || cleanHost === 'localhost' || cleanHost === '127.0.0.1';
+  const [hostname, rawPort] = currentHost.trim().toLowerCase().split(':');
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost');
+  const port = rawPort && /^\d+$/.test(rawPort) ? `:${rawPort}` : '';
+  const origin = isLocal ? `http://mybusiness.localhost${port}` : 'https://mybusiness.stack37.com';
 
-  if (isLocal) {
-    return `http://${slug}.localhost${port}/`;
-  }
-  return `https://${slug}.stack37.com/`;
+  return `${origin}/w/${encodeURIComponent(slug)}`;
 }
