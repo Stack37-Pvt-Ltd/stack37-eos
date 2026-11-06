@@ -60,6 +60,11 @@ export default async function proxy(request: NextRequest) {
   // Get host safely and clean port for local testing
   const host = request.headers.get('host') || '';
   const [hostname, port] = host.split(':');
+  const deploymentHost = process.env.VERCEL_URL?.trim().toLowerCase();
+  const isExactVercelPreview =
+    process.env.VERCEL_ENV === 'preview' &&
+    Boolean(deploymentHost) &&
+    host.toLowerCase() === deploymentHost;
 
   // In production, enforce domain logic. For local, handle localhost
   const isLocalhost = hostname.endsWith('localhost') || hostname === 'localhost';
@@ -67,7 +72,10 @@ export default async function proxy(request: NextRequest) {
 
   // Subdomain parsing
   let subdomain = '';
-  if (hostname.endsWith(`.${baseDomain}`)) {
+  if (isExactVercelPreview) {
+    // Treat only this deployment's exact Vercel Preview hostname as the portal host.
+    subdomain = 'mybusiness';
+  } else if (hostname.endsWith(`.${baseDomain}`)) {
     subdomain = hostname.replace(`.${baseDomain}`, '');
   }
 
@@ -96,6 +104,7 @@ export default async function proxy(request: NextRequest) {
 
   // 5. Default / no subdomain -> return 404 for this app
   const isValidSubdomain =
+    isExactVercelPreview ||
     (subdomain && subdomain !== baseDomain && !RESERVED_SUBDOMAINS.has(subdomain)) ||
     subdomain === 'mybusiness';
 
@@ -104,9 +113,11 @@ export default async function proxy(request: NextRequest) {
   }
 
   const portSuffix = port ? `:${port}` : '';
-  const canonicalPortalOrigin = isLocalhost
-    ? `http://mybusiness.localhost${portSuffix}`
-    : 'https://mybusiness.stack37.com';
+  const canonicalPortalOrigin = isExactVercelPreview
+    ? `https://${deploymentHost}`
+    : isLocalhost
+      ? `http://mybusiness.localhost${portSuffix}`
+      : 'https://mybusiness.stack37.com';
 
   // 6. Handle legacy tenant subdomains (*.stack37.com or *.localhost:3000)
   if (subdomain !== 'mybusiness') {
