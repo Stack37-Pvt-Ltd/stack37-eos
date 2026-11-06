@@ -260,3 +260,13 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 * **Owner:** Engineering Team
 * **Status:** `COMPLETED_COMMITTED`
 * **Evidence:** Commits `8039975` through `d4b6b2c`. Migrations 01–07 deployed. Tenant isolation verified via `tenant-isolation.test.ts`.
+
+## TASK-UK-SUPER-002 — UK Super inventory review UI and staging integration
+
+* **Owner:** Joint — Antigravity owns the import schema/RPCs; Codex owns the dashboard UI.
+* **Status:** READY_FOR_REVIEW — CEO accepted the local dashboard UI and authorized this isolated branch push on November 6, 2026. This status is not CEO acceptance of the branch or production release.
+* **Scope:** Present UK Super's staged inventory inside Retail & E-Commerce → Inventory, show the staged/not-live warning, and allow the owner to review or edit flagged draft fields through the existing `resolve_product_draft` RPC. Include Migration 14 and its backend contract/test artifacts authored under the task. Do not publish products or change stock quantities.
+* **Hosted data state (recorded earlier):** 2,079 UK Super product drafts staged; 395 have review flags; all remain staged; zero published products and no opening stock imported. Migrations 13 and 14 were applied under separate CEO approval. This push does not run migrations or modify hosted data.
+* **Local review evidence:** The CEO accepted the dashboard layout locally on November 5, 2026. The old drafts URL redirects to the embedded Inventory tab. Reported unit tests, typecheck, lint, and diff checks passed at handoff; Codex did not rerun tests during this packaging step.
+* **Git boundary:** This isolated branch is based on `codex/task-sync-001-integration`. It excludes unrelated Team, security tracker, and routing follow-up edits from the shared checkout. No merge to `main`, product publication, new database migration, or production deployment is included.
+* **Preview note:** Vercel may automatically build a Preview for this branch. Project notes indicate Preview can use the shared hosted Supabase project, and no verified app-wide read-only protection exists; authenticated draft edits may therefore affect the already-staged UK Super rows.

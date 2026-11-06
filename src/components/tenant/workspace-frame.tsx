@@ -4,13 +4,14 @@ import { OrganizationSwitcher } from './organization-switcher';
 import { WorkspaceNavigation } from './workspace-navigation';
 import type { UserOrganization } from '../../lib/auth/tenant-utils';
 
-export function WorkspaceFrame({ children, organization, organizations, host, email, isOwner, accountActions }: {
+export function WorkspaceFrame({ children, organization, organizations, host, email, isOwner, categoryName, accountActions }: {
   children: ReactNode;
   organization: { slug: string; name: string };
   organizations: UserOrganization[];
   host: string;
   email?: string;
   isOwner: boolean;
+  categoryName?: string | null;
   accountActions: ReactNode;
 }) {
   return (
@@ -31,7 +32,7 @@ export function WorkspaceFrame({ children, organization, organizations, host, em
           </div>
         </div>
       </header>
-      <WorkspaceNavigation tenantSlug={organization.slug} />
+      <WorkspaceNavigation tenantSlug={organization.slug} categoryName={categoryName} />
       <main id="main-content" className="app-container py-8 sm:py-10">{children}</main>
     </div>
   );

@@ -69,3 +69,9 @@ The CEO-directed local-only verification pass on October 14, 2026 reran **194/19
 - **Authentication and workflows:** Verify real signup, confirmation, login, recovery, session/cookie behavior across workspace subdomains, organization switching, and Business Settings persistence/permissions.
 
 **Current boundary:** Prior local integration and the CEO-directed local-only TASK-STAB-005 pass are ACCEPTED. TASK-STAB-005C corrections remain READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED and remain mandatory before commercial deployment. The revised verification proposal remains separate and pending. This pass made no commit, push, merge, rebase, deployment, production-service change, worktree deletion, or backend behavior change. All worktrees and recovery/report evidence remain preserved. This acceptance does not authorize Migration 13, deployment, or a new ERP task.
+
+## UK Super inventory task (November 6, 2026)
+
+The UK Super inventory review UI and product-draft staging integration are packaged on branch `codex/task-uk-super-002-integration`, based on the pushed TASK-SYNC-001 baseline. The local UI was accepted by the CEO; this branch is awaiting review. Hosted UK Super currently has 2,079 staged drafts, 395 flagged rows, zero published products, and no imported stock. This branch push does not apply migrations or publish products.
+
+The Vercel Preview environment may share the hosted Supabase project. No app-wide read-only guard has been verified; an authenticated draft edit in Preview could update an existing UK Super draft. Keep review edits intentional. No merge to `main` or production deployment is part of this task.
