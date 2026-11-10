@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ArrowRight, BarChart3, Banknote, Boxes, CreditCard, LayoutDashboard, LockKeyhole,
   ReceiptText, Search, ShieldCheck, ShoppingCart, Store, Tag, Truck, UserRound, Users, Wallet,
@@ -26,6 +26,16 @@ const sections = [
 
 export type RetailSection = (typeof sections)[number]['id'];
 type RecordSection = Exclude<RetailSection, 'overview' | 'pos' | 'inventory'>;
+
+type DemoProduct = { id: string; name: string; barcode: string; price: number };
+type DemoPaymentMethod = 'cash' | 'card';
+
+const DEMO_PRODUCTS: DemoProduct[] = [
+  { id: 'demo-chocolate', name: 'Chocolate Snack Box', barcode: 'DEMO-0001', price: 680 },
+  { id: 'demo-drink', name: 'Sparkling Lime Drink · 330 ml', barcode: 'DEMO-0002', price: 420 },
+  { id: 'demo-notebook', name: 'Everyday Notebook · A5', barcode: 'DEMO-0003', price: 950 },
+  { id: 'demo-tote', name: 'Reusable Tote Bag', barcode: 'DEMO-0004', price: 1200 },
+];
 
 interface ModuleDefinition {
   title: string;
@@ -170,25 +180,134 @@ function UnavailableBlock({ title, detail }: { title: string; detail: string }) 
 }
 
 function PointOfSale() {
+  const [search, setSearch] = useState('');
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [paymentMethod, setPaymentMethod] = useState<DemoPaymentMethod | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const cartLines = useMemo(
+    () => DEMO_PRODUCTS.flatMap((product) => {
+      const quantity = quantities[product.id] ?? 0;
+      return quantity > 0 ? [{ ...product, quantity, lineTotal: product.price * quantity }] : [];
+    }),
+    [quantities]
+  );
+  const subtotal = cartLines.reduce((sum, line) => sum + line.lineTotal, 0);
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const matchingProducts = DEMO_PRODUCTS.filter((product) =>
+    !normalizedSearch ||
+    product.name.toLocaleLowerCase().includes(normalizedSearch) ||
+    product.barcode.toLocaleLowerCase() === normalizedSearch
+  );
+
+  function addProduct(productId: string) {
+    setQuantities((current) => ({ ...current, [productId]: (current[productId] ?? 0) + 1 }));
+    setShowReceipt(false);
+  }
+
+  function changeQuantity(productId: string, delta: number) {
+    setQuantities((current) => {
+      const nextQuantity = (current[productId] ?? 0) + delta;
+      if (nextQuantity <= 0) {
+        const next = { ...current };
+        delete next[productId];
+        return next;
+      }
+      return { ...current, [productId]: nextQuantity };
+    });
+    setShowReceipt(false);
+  }
+
+  function startNewDemoSale() {
+    setQuantities({});
+    setPaymentMethod(null);
+    setSearch('');
+    setShowReceipt(false);
+  }
+
   return (
     <section aria-labelledby="pos-title" className="space-y-6">
-      <div><p className="eyebrow mb-2">Checkout</p><h2 id="pos-title" className="text-2xl font-semibold tracking-tight">Point of sale</h2><p className="mt-2 text-sm text-slate-600">Scan items, review the basket and complete a sale.</p></div>
+      <div>
+        <p className="eyebrow mb-2">Checkout prototype</p>
+        <h2 id="pos-title" className="text-2xl font-semibold tracking-tight">Point of sale</h2>
+        <p className="mt-2 text-sm text-slate-600">Try sample product lookup, a basket, and a receipt preview.</p>
+      </div>
+
+      <p role="status" className="border-l-2 border-amber-500 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+        Demo only: these sample products stay in this page. No payment is taken, no sale is saved, and no stock is changed.
+      </p>
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-        <div className="min-w-0 space-y-4 border border-brand-line p-4 sm:p-5">
-          <label htmlFor="pos-search" className="block text-sm font-medium text-brand-navy">Product or barcode</label>
-          <div className="relative"><Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" /><input id="pos-search" type="search" disabled aria-describedby="retail-connection-note" placeholder="Scan a barcode or search products" className="min-h-11 w-full min-w-0 border border-brand-line bg-slate-50 py-2 pl-10 pr-3 text-sm text-slate-600" /></div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-line pb-3"><h3 className="font-semibold">Current sale</h3><Button type="button" variant="outline" disabled aria-describedby="retail-connection-note">Clear sale</Button></div>
-          <div className="border border-dashed border-brand-line bg-slate-50 px-4 py-10 text-center"><ReceiptText aria-hidden="true" className="mx-auto h-6 w-6 text-slate-400" /><p className="mt-3 text-sm font-medium text-brand-navy">Sale items unavailable</p><p className="mt-1 text-xs leading-5 text-slate-600">Product lookup and checkout are not connected yet.</p></div>
+        <div className="min-w-0 space-y-5 border border-brand-line p-4 sm:p-5">
+          <div className="space-y-3">
+            <label htmlFor="pos-search" className="block text-sm font-medium text-brand-navy">Product name or sample barcode</label>
+            <div className="relative">
+              <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input id="pos-search" type="search" value={search} onChange={(event) => setSearch(event.target.value)}
+                placeholder="Try Chocolate or DEMO-0001" className="min-h-11 w-full min-w-0 border border-brand-line bg-white py-2 pl-10 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue" />
+            </div>
+            <ul aria-label="Sample products" className="divide-y divide-brand-line border border-brand-line">
+              {matchingProducts.length === 0 ? <li className="px-3 py-4 text-sm text-slate-600">No sample product matches that search.</li>
+                : matchingProducts.map((product) => (
+                  <li key={product.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 p-3">
+                    <div className="min-w-0"><p className="break-words text-sm font-medium text-brand-navy">{product.name}</p><p className="mt-1 break-all font-mono text-xs text-slate-500">{product.barcode}</p></div>
+                    <div className="flex shrink-0 items-center gap-3"><span className="text-sm font-medium">{formatLkr(product.price)}</span><Button type="button" size="sm" variant="outline" onClick={() => addProduct(product.id)}>Add</Button></div>
+                  </li>
+                ))}
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-line pb-3">
+              <h3 className="font-semibold">Current sale</h3>
+              <Button type="button" variant="outline" disabled={cartLines.length === 0} onClick={startNewDemoSale}>Clear sale</Button>
+            </div>
+            {cartLines.length === 0 ? <div className="border border-dashed border-brand-line bg-slate-50 px-4 py-8 text-center"><ReceiptText aria-hidden="true" className="mx-auto h-6 w-6 text-slate-400" /><p className="mt-3 text-sm font-medium text-brand-navy">No items yet</p><p className="mt-1 text-xs leading-5 text-slate-600">Add a sample product to see how the basket works.</p></div>
+              : <ul aria-label="Current sample basket" className="divide-y divide-brand-line border border-brand-line">
+                {cartLines.map((line) => (
+                  <li key={line.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 p-3">
+                    <div className="min-w-0"><p className="break-words text-sm font-medium text-brand-navy">{line.name}</p><p className="mt-1 text-xs text-slate-600">{formatLkr(line.price)} each</p></div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button type="button" size="sm" variant="outline" aria-label={`Remove one ${line.name}`} onClick={() => changeQuantity(line.id, -1)}>−</Button>
+                      <span aria-label={`Quantity ${line.quantity}`} className="min-w-6 text-center text-sm font-medium">{line.quantity}</span>
+                      <Button type="button" size="sm" variant="outline" aria-label={`Add one ${line.name}`} onClick={() => changeQuantity(line.id, 1)}>+</Button>
+                      <span className="ml-1 min-w-20 text-right text-sm font-medium">{formatLkr(line.lineTotal)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>}
+          </div>
         </div>
-        <aside aria-label="Payment summary" className="min-w-0 space-y-5 border border-brand-line p-4 sm:p-5">
-          <div><h3 className="font-semibold">Payment summary</h3><p className="mt-1 text-xs text-slate-600">Review totals before completing the sale.</p></div>
-          <dl className="space-y-3 text-sm">{['Subtotal', 'Discount', 'Tax', 'Total'].map((label) => <div key={label} className="flex justify-between gap-3"><dt className="text-slate-600">{label}</dt><dd className="font-medium text-brand-navy">Unavailable</dd></div>)}</dl>
-          <div><p className="mb-2 text-sm font-medium">Payment method</p><div className="grid grid-cols-2 gap-2"><Button type="button" variant="outline" disabled aria-describedby="retail-connection-note"><Banknote aria-hidden="true" className="h-4 w-4" /> Cash</Button><Button type="button" variant="outline" disabled aria-describedby="retail-connection-note"><CreditCard aria-hidden="true" className="h-4 w-4" /> Card</Button></div></div>
-          <Button type="button" className="w-full" disabled aria-describedby="retail-connection-note">Complete sale</Button>
+
+        <aside aria-label={showReceipt ? 'Sample receipt preview' : 'Sample checkout summary'} className="min-w-0 space-y-5 border border-brand-line p-4 sm:p-5">
+          {showReceipt ? <>
+            <div className="flex items-start gap-3"><ReceiptText aria-hidden="true" className="mt-0.5 h-5 w-5 text-brand-blue" /><div><h3 className="font-semibold">Receipt preview</h3><p className="mt-1 text-xs text-slate-600">Sample only · not recorded</p></div></div>
+            <div className="border-y border-dashed border-brand-line py-4">
+              <p className="text-center text-xs font-semibold uppercase tracking-wider text-slate-500">UK Super · Demo receipt</p>
+              <p className="mt-2 text-center font-mono text-xs text-slate-500">SAMPLE-0001</p>
+              <ul className="mt-4 space-y-2 text-sm">{cartLines.map((line) => <li key={line.id} className="flex justify-between gap-3"><span className="min-w-0 break-words">{line.quantity} × {line.name}</span><span className="shrink-0">{formatLkr(line.lineTotal)}</span></li>)}</ul>
+              <div className="mt-4 flex justify-between gap-3 border-t border-brand-line pt-3 text-sm font-semibold"><span>Sample subtotal</span><span>{formatLkr(subtotal)}</span></div>
+              <p className="mt-2 text-xs leading-5 text-slate-600">Taxes and discounts are not calculated in this prototype.</p>
+              <p className="mt-3 text-center text-xs text-slate-500">Payment selection: {paymentMethod === 'cash' ? 'Cash (sample)' : 'Card (sample)'}</p>
+            </div>
+            <p role="status" className="text-sm leading-6 text-emerald-800">Demo complete. No payment was taken and this receipt was not saved.</p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1"><Button type="button" variant="outline" disabled aria-describedby="pos-hardware-note"><ReceiptText aria-hidden="true" className="h-4 w-4" /> Print receipt</Button><Button type="button" variant="outline" disabled aria-describedby="pos-hardware-note"><Banknote aria-hidden="true" className="h-4 w-4" /> Open cash drawer</Button></div>
+            <p id="pos-hardware-note" className="text-xs leading-5 text-slate-500">Receipt printing and cash drawer hardware are not connected.</p>
+            <Button type="button" className="w-full" onClick={startNewDemoSale}>Start another demo sale</Button>
+          </> : <>
+            <div><h3 className="font-semibold">Checkout summary</h3><p className="mt-1 text-xs text-slate-600">Sample totals only; no tax or discount calculation.</p></div>
+            <dl className="space-y-3 text-sm"><div className="flex justify-between gap-3"><dt className="text-slate-600">Items</dt><dd className="font-medium text-brand-navy">{cartLines.reduce((count, line) => count + line.quantity, 0)}</dd></div><div className="flex justify-between gap-3"><dt className="text-slate-600">Sample subtotal</dt><dd className="font-semibold text-brand-navy">{formatLkr(subtotal)}</dd></div></dl>
+            <div><p className="mb-2 text-sm font-medium">Demo payment selection</p><div className="grid grid-cols-2 gap-2"><Button type="button" variant={paymentMethod === 'cash' ? 'primary' : 'outline'} aria-pressed={paymentMethod === 'cash'} onClick={() => setPaymentMethod('cash')}><Banknote aria-hidden="true" className="h-4 w-4" /> Cash</Button><Button type="button" variant={paymentMethod === 'card' ? 'primary' : 'outline'} aria-pressed={paymentMethod === 'card'} onClick={() => setPaymentMethod('card')}><CreditCard aria-hidden="true" className="h-4 w-4" /> Card</Button></div></div>
+            <Button type="button" className="w-full" disabled={cartLines.length === 0 || paymentMethod === null} onClick={() => setShowReceipt(true)}>Show demo receipt</Button>
+            <p className="text-xs leading-5 text-slate-500">This only changes what you see here. It does not contact a payment service or save a sale.</p>
+          </>}
         </aside>
       </div>
     </section>
   );
+}
+
+function formatLkr(value: number) {
+  return new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(value);
 }
 
 function ModulePanel({ definition }: { definition: ModuleDefinition }) {

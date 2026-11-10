@@ -273,3 +273,13 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 
 * **Vercel Preview follow-up:** The first branch build failed because the UK Super demo route's local-only demo component was missing from the candidate. Added src/components/tenant/supermarket-demo.tsx in a task-labeled follow-up commit; the Preview rebuild is being checked. This component uses fictional sample data and disabled operational controls.
 * **Preview hostname routing (November 6, 2026):** Added exact deployment-host routing to this branch under `TASK-SYNC-001-PREVIEW-ROUTING-001`. The CEO explicitly authorized this push after being told the Preview may connect to hosted Supabase and the editor can save staged drafts. Typecheck and diff check passed; unit tests were not rerun. No inventory edits, migration, publication, merge, or production deployment were performed. Vercel rebuild and URL verification remain pending.
+
+### TASK-UK-SUPER-003 — Point of Sale screen prototype
+
+* **Owner:** ChatGPT Codex (Frontend / UI)
+* **Status:** `READY_FOR_REVIEW` — CEO authorized the task on November 6, 2026; local implementation and static checks are complete.
+* **Customer result:** The UK Super workspace has a clickable sample checkout that demonstrates product lookup, basket editing, payment selection, and a receipt preview.
+* **Implementation:** Four fictional products with LKR prices; lookup by product name or sample barcode; add/remove quantity controls; item count and sample subtotal; Cash/Card selection; and a receipt preview that is not saved. Prominent copy states no payment is taken, no sale is saved, and no stock is changed. Tax and discounts are not calculated; print and cash-drawer controls are disabled because hardware is not connected.
+* **File:** `src/components/tenant/retail-operations-workspace.tsx`.
+* **Verification:** `npm run typecheck` PASS; scoped ESLint PASS; `git diff --check` PASS. Unit tests were not run. Browser interaction and 375px review remain pending: the local server started on port 3003 with loopback Supabase settings, but requests to the workspace routes returned 404, so the prototype could not be opened for visual review. The server was stopped afterward.
+* **Boundary:** No Supabase/API requests, payment, database changes, commit, push, or deployment. Any backend integration and Git/deployment action requires separate approval.
