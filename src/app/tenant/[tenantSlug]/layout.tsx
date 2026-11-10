@@ -15,6 +15,7 @@ import { TenantAccessDenied } from '../../../components/tenant/access-denied';
 import { LogOut } from 'lucide-react';
 import { WorkspaceFrame } from '../../../components/tenant/workspace-frame';
 import { Button } from '../../../components/ui/button';
+import { getBusinessConfiguration } from '../../../lib/auth/business-config';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,7 +25,9 @@ export default async function TenantLayout(props: {
   params: Promise<{ tenantSlug: string }>;
 }) {
   const params = await props.params;
-  const access = await requireTenantAccess(params.tenantSlug);
+  const headerList = await headers();
+  const currentPath = headerList.get('x-pathname') || `/w/${params.tenantSlug}`;
+  const access = await requireTenantAccess(params.tenantSlug, currentPath);
 
   if (!access.authorized) {
     if (access.reason === 'unauthenticated') {
@@ -51,7 +54,7 @@ export default async function TenantLayout(props: {
 
   const { organization, membership, user } = access.context;
   const userOrganizations = await getUserOrganizations();
-  const headerList = await headers();
+  const businessConfiguration = await getBusinessConfiguration(organization.id, membership.id);
   const currentHost = headerList.get('host') || '';
 
   async function handleSignOut() {
@@ -61,7 +64,7 @@ export default async function TenantLayout(props: {
   }
 
   return (
-    <WorkspaceFrame organization={organization} organizations={userOrganizations} host={currentHost} email={user.email} isOwner={membership.is_owner}
+    <WorkspaceFrame organization={organization} organizations={userOrganizations} host={currentHost} email={user.email} isOwner={membership.is_owner} categoryName={businessConfiguration?.organization.categoryName}
       accountActions={<form action={handleSignOut}><Button variant="outline" size="sm" type="submit"><LogOut className="h-4 w-4" /><span>Sign out</span></Button></form>}>
       {props.children}
     </WorkspaceFrame>

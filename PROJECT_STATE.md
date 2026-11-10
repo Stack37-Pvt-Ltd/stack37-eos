@@ -69,3 +69,15 @@ The CEO-directed local-only verification pass on October 14, 2026 reran **194/19
 - **Authentication and workflows:** Verify real signup, confirmation, login, recovery, session/cookie behavior across workspace subdomains, organization switching, and Business Settings persistence/permissions.
 
 **Current boundary:** Prior local integration and the CEO-directed local-only TASK-STAB-005 pass are ACCEPTED. TASK-STAB-005C corrections remain READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED and remain mandatory before commercial deployment. The revised verification proposal remains separate and pending. This pass made no commit, push, merge, rebase, deployment, production-service change, worktree deletion, or backend behavior change. All worktrees and recovery/report evidence remain preserved. This acceptance does not authorize Migration 13, deployment, or a new ERP task.
+
+## UK Super inventory task (November 6, 2026)
+
+The UK Super inventory review UI and product-draft staging integration are packaged on branch `codex/task-uk-super-002-integration`, based on the pushed TASK-SYNC-001 baseline. The local UI was accepted by the CEO; this branch is awaiting review. Hosted UK Super currently has 2,079 staged drafts, 395 flagged rows, zero published products, and no imported stock. This branch push does not apply migrations or publish products.
+
+The Vercel Preview environment may share the hosted Supabase project. No app-wide read-only guard has been verified; an authenticated draft edit in Preview could update an existing UK Super draft. The CEO explicitly authorized pushing the exact-host routing fix on November 6 after receiving this information. No inventory edits, database migrations, merge to `main`, or production deployment are included.
+
+Vercel created a Preview for the UK Super branch. Its first build failed because the candidate omitted the demo-only supermarket-demo component imported by the UK Super route. A follow-up commit added that component and the Preview build became READY. The new exact-host routing change is now being pushed; verify its Preview deployment and route before review.
+
+## November 6, 2026 — TASK-UK-SUPER-003 POS prototype
+
+**Status:** READY_FOR_REVIEW on isolated branch `codex/task-uk-super-003-pos-prototype`. The Point of Sale tab now provides a frontend-only sample checkout with fictional products, local basket state, mock Cash/Card selection, LKR subtotal, and a non-persistent receipt preview. The page says no payment is taken, no sale is saved, and stock is unchanged. TypeScript, scoped ESLint, and `git diff --check` pass; unit tests were not run. Browser and 375px visual review remain pending: local requests to workspace routes returned 404 even after starting the server with loopback Supabase settings; the server was stopped. No database/API/payment action, commit, push, or deployment occurred.

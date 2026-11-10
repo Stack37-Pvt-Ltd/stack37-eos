@@ -52,7 +52,7 @@ export function WorkspaceOverview({ organization, membership, data }: {
       </div>
       <section className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
         <div><h2 className="text-lg font-semibold">Business settings</h2><p className="mt-2 text-sm text-slate-600">Manage your profile, tax details and Headquarters.</p></div>
-        <Button asChild><Link href="/settings">Open settings <ArrowRight className="h-4 w-4" /></Link></Button>
+        <Button asChild><Link href={`/w/${encodeURIComponent(organization.slug)}/settings`}>Open settings <ArrowRight className="h-4 w-4" /></Link></Button>
       </section>
       {data && <details className="border-t border-brand-line pt-5 text-sm"><summary className="cursor-pointer text-slate-600">Workspace details</summary><dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2"><div><dt className="text-slate-500">Workspace</dt><dd className="mt-1 break-all font-mono">{organization.slug}</dd></div><div><dt className="text-slate-500">Access</dt><dd className="mt-1 break-words">Access is managed through your assigned workspace role.</dd></div></dl></details>}
     </div>

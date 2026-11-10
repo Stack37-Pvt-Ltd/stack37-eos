@@ -47,9 +47,14 @@ export interface BusinessConfigurationData {
     isOwnerAssigned: boolean;
   } | null;
   categories: BusinessCategoryItem[];
+  hasCategoriesError?: boolean;
   canEdit: boolean;
 }
 
+/**
+ * @deprecated Legacy placeholder category array. Category options must originate from
+ * the authoritative public.business_categories database table with valid UUIDs.
+ */
 export const CURATED_CATEGORIES: BusinessCategoryItem[] = [
   { id: 'cat-retail', name: 'Retail & E-Commerce', description: 'Consumer goods, storefronts, and online retail' },
   { id: 'cat-services', name: 'Professional Services', description: 'Consulting, legal, accounting, and advisory' },
@@ -69,6 +74,8 @@ export const CURATED_CATEGORIES: BusinessCategoryItem[] = [
  * - Headquarters branch is resolved by is_headquarters flag first, then by name or earliest branch ID,
  *   ensuring resilience even if the branch is renamed.
  * - Currency and timezone are NOT silently forced to USD/UTC; explicit selection is supported and tracked.
+ * - Business categories are loaded strictly from public.business_categories with valid database UUIDs.
+ *   Query failures are logged server-side only and never expose database error details to users.
  */
 export async function getBusinessConfiguration(
   organizationId: string,
@@ -200,16 +207,23 @@ export async function getBusinessConfiguration(
     );
   }
 
-  // 5. Fetch Business Categories from database or fallback to curated list
-  const { data: dbCategories } = await supabase
+  // 5. Fetch Business Categories from database with explicit error capture
+  const { data: dbCategories, error: categoriesError } = await supabase
     .from('business_categories')
     .select('id, name, description')
     .order('name');
 
+  if (categoriesError) {
+    // Log internal database error server-side ONLY. Do not leak details to the client.
+    console.error('[business-config] Failed to fetch business categories:', categoriesError.message);
+  }
+
+  // Strictly return authentic database categories with valid UUIDs.
+  // Never fallback to non-UUID placeholder IDs like 'cat-retail'.
   const categories: BusinessCategoryItem[] =
-    dbCategories && dbCategories.length > 0
+    !categoriesError && dbCategories && dbCategories.length > 0
       ? dbCategories
-      : CURATED_CATEGORIES;
+      : [];
 
   const currentCategory = categories.find((c) => c.id === orgRow?.category_id);
 
@@ -261,6 +275,7 @@ export async function getBusinessConfiguration(
         }
       : null,
     categories,
+    hasCategoriesError: Boolean(categoriesError),
     canEdit,
   };
 }
