@@ -1,7 +1,7 @@
 # TASK-TEAM-002 — Preview host routing handoff
 
-**Status:** Backend contract requested; no routing change implemented.  
-**Date:** October 15, 2026 (Asia/Colombo)  
+**Status:** CEO-directed exact-host routing correction implemented in TASK-TEAM-002 commit `e4ac490`; Preview build and public route smoke passed. Signed-in auth/roster behavior remains unverified.
+**Date:** November 16, 2026 (Asia/Colombo)
 **Owner boundary:** Antigravity owns host validation, authentication redirects, and tenant security. Codex owns the Team UI and approved frontend integration after the backend contract is recorded.
 
 ## Goal and current evidence
@@ -41,7 +41,9 @@ The CEO requested a usable Preview from the completed local Team UI work. The ne
 - Forward the validated public pathname to the tenant layout so an unauthenticated employee returns to the requested workspace page after sign-in.
 - The tenant guard, RLS, and server-side role checks remain authoritative. The Team UI remains read-only in Preview; this routing patch does not enable writes.
 
-Unit coverage belongs in `tests/unit/proxy-routing.test.ts` and `tests/unit/auth-actions.test.ts`. No database call, migration, live-data mutation, or Production deployment is part of this correction.
+Unit coverage was added in `tests/unit/proxy-routing.test.ts` and `tests/unit/auth-actions.test.ts`; 57/57 focused tests, TypeScript, scoped ESLint, and `git diff --check` passed. The exact route implementation is in `src/proxy.ts`, `src/lib/auth/host.ts`, and `src/app/tenant/[tenantSlug]/layout.tsx`. Preview `dpl_4x9vXdLPDYL2CQmJXCubcq6nf8t3` for commit `e4ac490` is READY; `/login` and `/w/uk-super/settings/team` resolve to sign-in on both deployment and branch URLs. Direct `/tenant/*` remains rejected. No database call, migration, live-data mutation, or Production deployment is part of this correction.
+
+The Team page keeps write actions disabled in Preview because it shares the Production Supabase integration. For full Retail POS and inventory screens, use the separate TASK-UK-SUPER-004 Preview at `https://stack37-74n4a3m4t-stack37.vercel.app`; unauthenticated requests to `/w/uk-super/retail` return sign-in. Signed-in workflow checks remain for CEO review.
 
 ## Verification and release boundary
 
