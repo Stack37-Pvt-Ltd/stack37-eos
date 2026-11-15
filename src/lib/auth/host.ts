@@ -12,6 +12,13 @@ export function isApprovedCallbackHost(host: string): boolean {
   if (!host) return false;
   const cleanHost = host.split(':')[0].toLowerCase();
 
+  const previewHosts = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]
+    .map((value) => value?.trim().toLowerCase().split('/')[0]?.split(':')[0])
+    .filter((value): value is string => Boolean(value));
+  if (process.env.VERCEL_ENV === 'preview' && previewHosts.includes(cleanHost)) {
+    return true;
+  }
+
   // Local development / testing environments
   if (
     cleanHost === 'localhost' ||

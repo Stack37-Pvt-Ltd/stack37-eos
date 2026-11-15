@@ -82,6 +82,73 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     expect(res.status).toBe(404);
   });
 
+  it('rewrites a validated workspace path on only the exact Vercel Preview host', async () => {
+    const oldEnv = process.env.VERCEL_ENV;
+    const oldUrl = process.env.VERCEL_URL;
+    const oldBranchUrl = process.env.VERCEL_BRANCH_URL;
+    process.env.VERCEL_ENV = 'preview';
+    process.env.VERCEL_URL = 'stack37-preview.vercel.app';
+    process.env.VERCEL_BRANCH_URL = 'stack37-eos-git-team-preview-stack37.vercel.app';
+
+    try {
+      const req = new NextRequest('https://stack37-preview.vercel.app/w/uk-super/settings/team', {
+        headers: { host: 'stack37-preview.vercel.app', 'x-tenant-slug': 'attacker' },
+      });
+      const res = await proxy(req);
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/uk-super/settings/team');
+      expect(req.headers.get('x-tenant-slug')).toBe('uk-super');
+      expect(req.headers.get('x-pathname')).toBe('/w/uk-super/settings/team');
+
+      const branchUrlReq = new NextRequest('https://stack37-eos-git-team-preview-stack37.vercel.app/w/uk-super/retail', {
+        headers: { host: 'stack37-eos-git-team-preview-stack37.vercel.app' },
+      });
+      const branchUrlRes = await proxy(branchUrlReq);
+      expect(branchUrlRes.status).toBe(200);
+      expect(branchUrlRes.headers.get('x-middleware-rewrite')).toContain('/tenant/uk-super/retail');
+    } finally {
+      if (oldEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = oldEnv;
+      if (oldUrl === undefined) delete process.env.VERCEL_URL;
+      else process.env.VERCEL_URL = oldUrl;
+      if (oldBranchUrl === undefined) delete process.env.VERCEL_BRANCH_URL;
+      else process.env.VERCEL_BRANCH_URL = oldBranchUrl;
+    }
+  });
+
+  it('rejects arbitrary Vercel hosts, direct tenant routes, and invalid workspace slugs', async () => {
+    const oldEnv = process.env.VERCEL_ENV;
+    const oldUrl = process.env.VERCEL_URL;
+    const oldBranchUrl = process.env.VERCEL_BRANCH_URL;
+    process.env.VERCEL_ENV = 'preview';
+    process.env.VERCEL_URL = 'stack37-preview.vercel.app';
+
+    try {
+      const arbitrary = await proxy(new NextRequest('https://other.vercel.app/login', {
+        headers: { host: 'other.vercel.app' },
+      }));
+      expect(arbitrary.status).toBe(404);
+
+      const directTenant = await proxy(new NextRequest('https://stack37-preview.vercel.app/tenant/uk-super/retail', {
+        headers: { host: 'stack37-preview.vercel.app' },
+      }));
+      expect(directTenant.status).toBe(404);
+
+      const reservedSlug = await proxy(new NextRequest('https://stack37-preview.vercel.app/w/admin/settings/team', {
+        headers: { host: 'stack37-preview.vercel.app' },
+      }));
+      expect(reservedSlug.status).toBe(404);
+    } finally {
+      if (oldEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = oldEnv;
+      if (oldUrl === undefined) delete process.env.VERCEL_URL;
+      else process.env.VERCEL_URL = oldUrl;
+      if (oldBranchUrl === undefined) delete process.env.VERCEL_BRANCH_URL;
+      else process.env.VERCEL_BRANCH_URL = oldBranchUrl;
+    }
+  });
+
   it('routes /registration on mybusiness.localhost without 404 or duplicated path prefix', async () => {
     const req = new NextRequest('http://mybusiness.localhost:3000/registration', {
       headers: { host: 'mybusiness.localhost:3000' },

@@ -31,6 +31,18 @@ Antigravity should record and approve a preview-only contract covering:
 
 The contract should name the affected files, configuration keys, input and return shapes, validation rules, and error/redirect behavior in `docs/TASKS.md` before dependent implementation. Codex can then implement only the frontend or integration portion explicitly assigned to it. Antigravity must author or review any changes to `src/proxy.ts`, `src/lib/auth/host.ts`, authentication behavior, or tenant security helpers.
 
+## CEO-directed Preview correction — November 16, 2026
+
+The CEO requested a usable Preview from the completed local Team UI work. The new deployment initially returned the app's 404 because this branch's proxy did not recognize Vercel's own Preview host or `/w/{tenantSlug}/...` paths. This correction is restricted to `src/proxy.ts` and `src/lib/auth/host.ts`:
+
+- Trust the request host only when it equals the deployment's normalized `VERCEL_URL` or `VERCEL_BRANCH_URL` exactly and `VERCEL_ENV` equals `preview`.
+- On that exact host only, keep shared authentication routes at the root and rewrite `/w/{tenantSlug}/{path}` to the existing `/tenant/{tenantSlug}/{path}` route after validating slug shape and reserved values. Remove any client-supplied tenant header before setting the validated slug; continue rejecting direct `/tenant/*` access.
+- Permit auth callback/confirmation requests only on that same exact Preview host, local approved hosts, or existing `stack37.com` hosts. Arbitrary `*.vercel.app` and Production host behavior remain unchanged.
+- Forward the validated public pathname to the tenant layout so an unauthenticated employee returns to the requested workspace page after sign-in.
+- The tenant guard, RLS, and server-side role checks remain authoritative. The Team UI remains read-only in Preview; this routing patch does not enable writes.
+
+Unit coverage belongs in `tests/unit/proxy-routing.test.ts` and `tests/unit/auth-actions.test.ts`. No database call, migration, live-data mutation, or Production deployment is part of this correction.
+
 ## Verification and release boundary
 
 - Run the existing unit, typecheck, scoped lint, and production-build gates after integration.

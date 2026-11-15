@@ -11,23 +11,37 @@ const RESERVED_SUBDOMAINS = new Set([
   'mybusiness',
 ]);
 
+const RESERVED_TENANT_SLUGS = new Set([
+  'admin', 'api', 'app', 'auth', 'billing', 'support', 'www', 'mybusiness',
+  'portal', 'status', 'mail', 'staging', 'dev', 'w', 'workspace', 'settings',
+  'tenant', 'dashboard',
+]);
+
+const TENANT_SLUG_REGEX = /^[a-z0-9](-?[a-z0-9]){1,61}[a-z0-9]$/;
+
 export default async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   
-  // Get host safely
-  let host = request.headers.get('host') || '';
-  
-  // Clean port for local testing
-  host = host.split(':')[0];
+  // Trust Vercel Preview routing only on this deployment's exact platform host.
+  const host = request.headers.get('host') || '';
+  const hostname = host.split(':')[0].toLowerCase();
+  const previewHosts = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL]
+    .map((value) => value?.trim().toLowerCase().split('/')[0]?.split(':')[0])
+    .filter((value): value is string => Boolean(value));
+  const isExactVercelPreview =
+    process.env.VERCEL_ENV === 'preview' &&
+    previewHosts.includes(hostname);
 
   // In production, enforce domain logic. For local, handle localhost
-  const isLocalhost = host.endsWith('localhost');
+  const isLocalhost = hostname.endsWith('localhost') || hostname === 'localhost';
   const baseDomain = isLocalhost ? 'localhost' : 'stack37.com';
 
   // Subdomain parsing
   let subdomain = '';
-  if (host.endsWith(`.${baseDomain}`)) {
-    subdomain = host.replace(`.${baseDomain}`, '');
+  if (isExactVercelPreview) {
+    subdomain = 'mybusiness';
+  } else if (hostname.endsWith(`.${baseDomain}`)) {
+    subdomain = hostname.replace(`.${baseDomain}`, '');
   }
 
   // Next.js internal paths should pass through unaltered
@@ -55,6 +69,7 @@ export default async function proxy(request: NextRequest) {
 
   // 4. Default / no subdomain -> return 404 for this app
   const isValidSubdomain =
+    isExactVercelPreview ||
     subdomain && subdomain !== baseDomain && !RESERVED_SUBDOMAINS.has(subdomain) ||
     subdomain === 'mybusiness';
 
@@ -82,6 +97,36 @@ export default async function proxy(request: NextRequest) {
   let targetUrl: URL;
   if (isSharedAuthRoute) {
     // Shared authentication routes map directly to top-level handlers
+    targetUrl = url;
+  } else if (isExactVercelPreview && (url.pathname === '/w' || url.pathname.startsWith('/w/'))) {
+    if (url.pathname === '/w' || url.pathname === '/w/') {
+      const directoryUrl = new URL('/select-organization', request.url);
+      return NextResponse.redirect(directoryUrl, 307);
+    }
+
+    const match = url.pathname.match(/^\/w\/([^/]+)(\/.*)?$/);
+    if (!match) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+
+    const rawSlug = match[1];
+    const rawSubpath = match[2] || '';
+    const tenantSlug = rawSlug.toLowerCase();
+
+    if (!TENANT_SLUG_REGEX.test(tenantSlug) || RESERVED_TENANT_SLUGS.has(tenantSlug)) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+
+    if (rawSlug !== tenantSlug) {
+      const normalizedUrl = request.nextUrl.clone();
+      normalizedUrl.pathname = `/w/${tenantSlug}${rawSubpath}`;
+      return NextResponse.redirect(normalizedUrl, 308);
+    }
+
+    // Ignore spoofed client identity headers; set the slug only after validating the URL.
+    request.headers.set('x-pathname', url.pathname);
+    request.headers.set('x-tenant-slug', tenantSlug);
+    url.pathname = `/tenant/${tenantSlug}${rawSubpath === '/' ? '' : rawSubpath}`;
     targetUrl = url;
   } else if (subdomain === 'mybusiness') {
     // mybusiness subdomain root -> registration route

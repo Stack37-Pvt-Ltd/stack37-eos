@@ -13,6 +13,7 @@ import { GET as authCallbackGET } from '../../src/app/auth/callback/route';
 import { GET as logoutGET, POST as logoutPOST } from '../../src/app/auth/logout/route';
 import ConfirmPage from '../../src/app/auth/confirm/page';
 import { createRecoveryToken, RECOVERY_COOKIE_NAME } from '../../src/lib/auth/recovery-token';
+import { isApprovedCallbackHost } from '../../src/lib/auth/host';
 
 // Mock cookies
 const mockCookieMap = new Map<string, string>();
@@ -738,5 +739,32 @@ describe('Authentication Server Actions & Route Handlers', () => {
         type: 'email',
       });
     });
+  });
+});
+
+describe('Approved authentication callback hosts', () => {
+  it('accepts only the exact Vercel deployment host when the environment is Preview', () => {
+    const oldEnv = process.env.VERCEL_ENV;
+    const oldUrl = process.env.VERCEL_URL;
+    const oldBranchUrl = process.env.VERCEL_BRANCH_URL;
+    process.env.VERCEL_ENV = 'preview';
+    process.env.VERCEL_URL = 'stack37-preview.vercel.app';
+    process.env.VERCEL_BRANCH_URL = 'stack37-eos-git-team-preview-stack37.vercel.app';
+
+    try {
+      expect(isApprovedCallbackHost('stack37-preview.vercel.app')).toBe(true);
+      expect(isApprovedCallbackHost('stack37-eos-git-team-preview-stack37.vercel.app')).toBe(true);
+      expect(isApprovedCallbackHost('attacker.vercel.app')).toBe(false);
+      process.env.VERCEL_ENV = 'production';
+      expect(isApprovedCallbackHost('stack37-preview.vercel.app')).toBe(false);
+      expect(isApprovedCallbackHost('mybusiness.stack37.com')).toBe(true);
+    } finally {
+      if (oldEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = oldEnv;
+      if (oldUrl === undefined) delete process.env.VERCEL_URL;
+      else process.env.VERCEL_URL = oldUrl;
+      if (oldBranchUrl === undefined) delete process.env.VERCEL_BRANCH_URL;
+      else process.env.VERCEL_BRANCH_URL = oldBranchUrl;
+    }
   });
 });
