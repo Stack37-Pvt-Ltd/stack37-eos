@@ -1,16 +1,17 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { RetailOperationsWorkspace } from '../../../../components/tenant/retail-operations-workspace';
 import { getBusinessConfiguration } from '../../../../lib/auth/business-config';
 import { requireTenantAccess } from '../../../../lib/auth/tenant-guard';
 import { supportsRetailOperations } from '../../../../lib/industry/category-features';
+import { createClient } from '../../../../lib/supabase/server';
+import { RetailLiveWorkspace } from '../../../../components/tenant/retail-live-workspace';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function RetailOperationsPage(props: {
   params: Promise<{ tenantSlug: string }>;
-  searchParams: Promise<{ section?: string | string[] }>;
+  searchParams: Promise<{ section?: string | string[]; branch?: string | string[] }>;
 }) {
   const [{ tenantSlug }, searchParams] = await Promise.all([props.params, props.searchParams]);
   const returnPath = `/w/${encodeURIComponent(tenantSlug)}/retail`;
@@ -37,15 +38,46 @@ export default async function RetailOperationsPage(props: {
     );
   }
 
-  const currencyCode = configuration?.organization.currency || configuration?.organization.suggestedCurrency || 'LKR';
-  const initialSection = searchParams.section === 'inventory' ? 'inventory' : 'overview';
-  return (
-    <RetailOperationsWorkspace
-      organizationId={organization.id}
-      organizationSlug={organization.slug}
-      organizationName={organization.name}
-      currencyCode={currencyCode}
-      initialSection={initialSection}
-    />
-  );
+  const supabase = await createClient();
+  let branches: Array<{ id: string; name: string }> = [];
+  let products: Array<{ id: string; name: string; sku: string; barcode: string | null; selling_price: number; quantity: number }> = [];
+  let dashboard: { salesToday: number; grossSalesToday: number; itemsSoldToday: number; activeProducts: number; lowStockProducts: number; pendingDraftReviews: number; currency: string } | null = null;
+  let loadError: string | undefined;
+  let inventoryPermission = false;
+  let salesPermission = false;
+  try {
+    const [{ data: assignments, error: branchError }, { data: member }, { data: memberRoles }] = await Promise.all([
+      supabase.from('membership_branches').select('branch_id, branches(id, name)').eq('organization_id', organization.id).eq('membership_id', membership.id),
+      supabase.from('organization_members').select('is_owner').eq('organization_id', organization.id).eq('id', membership.id).maybeSingle(),
+      supabase.from('membership_roles').select('role_id').eq('organization_id', organization.id).eq('membership_id', membership.id),
+    ]);
+    if (branchError) throw branchError;
+    branches = (assignments || []).flatMap((row) => (row.branches || []).map((branch) => ({ id: branch.id, name: branch.name })));
+    const roleIds = (memberRoles || []).map((row) => row.role_id);
+    if (member?.is_owner) { inventoryPermission = true; salesPermission = true; }
+    else if (roleIds.length) {
+      const { data: grants } = await supabase.from('role_permissions').select('permission_id').eq('organization_id', organization.id).in('role_id', roleIds);
+      const permissions = new Set((grants || []).map((grant) => grant.permission_id));
+      inventoryPermission = permissions.has('inventory_edit'); salesPermission = permissions.has('pos_checkout');
+    }
+    const requestedBranch = typeof searchParams.branch === 'string' ? searchParams.branch : null;
+    const branchId = branches.find((branch) => branch.id === requestedBranch)?.id || branches[0]?.id || null;
+    if (branchId) {
+      const [{ data: catalog, error: catalogError }, { data: balances, error: balanceError }, { data: totals, error: totalsError }] = await Promise.all([
+        supabase.from('products').select('id, name, sku, barcode, selling_price').eq('organization_id', organization.id).eq('is_active', true).order('name').limit(1000),
+        supabase.from('inventory_balances').select('product_id, quantity').eq('organization_id', organization.id).eq('branch_id', branchId),
+        supabase.rpc('get_retail_dashboard', { p_organization_id: organization.id, p_branch_id: branchId }),
+      ]);
+      if (catalogError) throw catalogError; if (balanceError) throw balanceError; if (totalsError) throw totalsError;
+      const quantityByProduct = new Map((balances || []).map((balance) => [balance.product_id, Number(balance.quantity)]));
+      products = (catalog || []).map((product) => ({ ...product, selling_price: Number(product.selling_price), quantity: quantityByProduct.get(product.id) || 0 }));
+      dashboard = totals as typeof dashboard;
+    }
+    if (!branches.length) loadError = 'No branch is assigned to this account.';
+  } catch {
+    loadError = 'Retail data could not be loaded. The retail database changes may not be installed in this environment.';
+  }
+  const requestedBranch = typeof searchParams.branch === 'string' ? searchParams.branch : null;
+  const branchId = branches.find((branch) => branch.id === requestedBranch)?.id || branches[0]?.id || null;
+  return <RetailLiveWorkspace organizationId={organization.id} organizationSlug={organization.slug} organizationName={organization.name} branchId={branchId} branches={branches} products={products} dashboard={dashboard} inventoryPermission={inventoryPermission} salesPermission={salesPermission} loadError={loadError} />;
 }

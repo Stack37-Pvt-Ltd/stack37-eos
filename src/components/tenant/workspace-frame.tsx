@@ -4,7 +4,7 @@ import { OrganizationSwitcher } from './organization-switcher';
 import { WorkspaceNavigation } from './workspace-navigation';
 import type { UserOrganization } from '../../lib/auth/tenant-utils';
 
-export function WorkspaceFrame({ children, organization, organizations, host, email, isOwner, categoryName, accountActions }: {
+export function WorkspaceFrame({ children, organization, organizations, host, email, isOwner, accountActions }: {
   children: ReactNode;
   organization: { slug: string; name: string };
   organizations: UserOrganization[];
@@ -19,7 +19,7 @@ export function WorkspaceFrame({ children, organization, organizations, host, em
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:bg-white focus:p-3">Skip to content</a>
       <header className="app-header">
         <div className="app-container flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-          <Brand href={`/w/${encodeURIComponent(organization.slug)}`} compact />
+          <Brand compact />
           <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
             <OrganizationSwitcher currentSlug={organization.slug} currentOrgName={organization.name} organizations={organizations} currentHost={host} />
           </div>
@@ -32,8 +32,8 @@ export function WorkspaceFrame({ children, organization, organizations, host, em
           </div>
         </div>
       </header>
-      <WorkspaceNavigation tenantSlug={organization.slug} categoryName={categoryName} />
-      <main id="main-content" className="app-container py-8 sm:py-10">{children}</main>
+      <WorkspaceNavigation />
+      <main id="main-content" className="app-container min-w-0 overflow-x-clip py-8 sm:py-10">{children}</main>
     </div>
   );
 }

@@ -2,20 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { supportsRetailOperations } from '../../lib/industry/category-features';
 
-export function WorkspaceNavigation({ tenantSlug, categoryName }: { tenantSlug: string; categoryName?: string | null }) {
-  const pathname = usePathname();
-  const workspacePath = `/w/${encodeURIComponent(tenantSlug)}`;
-  const inOverview = pathname === workspacePath || pathname === `${workspacePath}/`;
-  const inSettings = pathname === `${workspacePath}/settings`;
-  const inRetail = pathname.startsWith(`${workspacePath}/retail`);
+export function WorkspaceNavigation() {
+  const pathname = usePathname() || '';
+  const previewMatch = pathname.match(/^\/w\/([^/]+)(?:\/|$)/);
+  const basePath = previewMatch ? `/w/${previewMatch[1]}` : '';
+  const overviewHref = basePath || '/';
+  const settingsHref = `${basePath}/settings`;
+  const teamHref = `${basePath}/settings/team`;
+  const inTeam = pathname === '/settings/team' || pathname.endsWith('/settings/team');
+  const inSettings = !inTeam && (pathname === '/settings' || pathname.endsWith('/settings'));
   return (
     <nav aria-label="Workspace" className="workspace-nav">
-      <div className="app-container flex flex-wrap gap-2">
-        <Link href={workspacePath} aria-current={inOverview ? 'page' : undefined}>Overview</Link>
-        {supportsRetailOperations(categoryName) && <Link href={`${workspacePath}/retail`} aria-current={inRetail ? 'page' : undefined}>Retail &amp; E-Commerce</Link>}
-        <Link href={`${workspacePath}/settings`} aria-current={inSettings ? 'page' : undefined}>Business settings</Link>
+      <div className="app-container flex gap-2">
+        <Link href={overviewHref} aria-current={!inSettings && !inTeam ? 'page' : undefined}>Overview</Link>
+        <Link href={settingsHref} aria-current={inSettings ? 'page' : undefined}>Business settings</Link>
+        <Link href={teamHref} aria-current={inTeam ? 'page' : undefined}>Team</Link>
       </div>
     </nav>
   );
