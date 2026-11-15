@@ -1,10 +1,10 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
-**Last updated:** October 14, 2026 (Asia/Colombo)
-**Branch:** `codex/task-team-002-preview` at `ef1eb43` (based on `132e54a6bb303700eb132d6e967efbad82e3fda6`)
+**Last updated:** October 15, 2026 (Asia/Colombo)
+**Branch:** `codex/task-team-002-preview` at `03f3881` (based on `132e54a6bb303700eb132d6e967efbad82e3fda6`)
 **Team integration baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6` (prior STAB integration baseline: `d17ed63a48e2313df0f5406d9074f9076b788721`)
-**Current tasks:** `TASK-STAB-005` and `TASK-TEAM-001` — ACCEPTED for their local-only scopes under DEC-020. `TASK-TEAM-002` — IN_PROGRESS; the CEO authorized a private Vercel Preview using the shared Supabase connection under DEC-021. Invitation acceptance and Migration 13 remain disabled/unapplied.
-**Evidence:** Team integration local checks and built-route review are recorded in the task history; real database, RLS, authentication, transaction, and end-to-end employee workflow verification remain DEFERRED / NOT EXECUTED. The Team integration was previously checkpointed in `7ec0870`; this acceptance only changes local documentation and makes no commit or deployment.
+**Current tasks:** `TASK-STAB-005` and `TASK-TEAM-001` — ACCEPTED for their local-only scopes under DEC-020. `TASK-TEAM-002` frontend Phase 1 — IN_PROGRESS for the CEO-requested November 16 Preview publication; the UI remains read-only for mutations because Preview shares Supabase with Production. Invitation acceptance and Migration 13 remain disabled/unapplied.
+**Evidence:** Frontend Phase 1 passes 243 unit tests, TypeScript, ESLint, production build and mocked browser review at 375px and 1440px. Combined backend/frontend verification and real database, RLS, authentication, transaction, and employee workflow verification remain DEFERRED / NOT EXECUTED. No commit, push, merge, deployment, database change, migration or live mutation test was made.
 
 ---
 
@@ -40,11 +40,13 @@ Independent VAT and SSCL settings, team management, ERP operations, subscription
 
 ## Current working tree
 
-The Team Management implementation was checkpointed in `7ec0870`, and the subsequent preview-deployment configuration in `ef1eb43`, before this acceptance. Only documentation for this approval is now uncommitted on `codex/task-team-002-preview`. The Team Management implementation and its worktree are preserved. The earlier TASK-STAB-005 integration branch and its checkpoints/reports remain preserved; Codex did not write to Antigravity's worktree. The root checkout contains the separate, uncommitted CEO-approved TASK-STAB-005 local-only report and must be reconciled before any future synchronization.
+TASK-TEAM-002 frontend changes are uncommitted in `.worktrees/team-integration` on `codex/task-team-002-preview`; the original preview-host handoff file and pre-existing documentation changes were preserved. Antigravity's uncommitted changes remain in `.worktrees/team-002-backend` on `antigravity/task-team-002-backend`. Codex inspected that worktree read-only and did not synchronize it. The earlier TASK-STAB-005 branches and reports remain preserved; the root checkout contains its separate uncommitted local-only report and must be reconciled before any future synchronization.
 
-For TASK-TEAM-002, local checks in this worktree passed: 232/232 unit tests across 15 files, TypeScript, scoped Team UI ESLint, and production build. Vercel confirms pushes to `main` create Production deployments. Preview and Production variables use the same Supabase integration. The CEO chose to use this shared connection for the private preview and was informed that preview actions could change live staff records. A non-production preview branch will be used; `main` will not be updated. No database operation has been made. Migration 13 remains unapplied and invitation acceptance disabled under DEC-021.
+The preview branch `codex/task-team-002-preview` at `03f3881` is published, with a READY Vercel Preview at [https://stack37-tv4j4r6y8-stack37.vercel.app](https://stack37-tv4j4r6y8-stack37.vercel.app). Antigravity's Phase 1 backend changes add trusted-host validation, explicit `/w/{tenantSlug}/...` routing, server-enforced preview mutation guards, and structured roster query failures. Codex's Phase 1 frontend implementation is locally READY_FOR_REVIEW in its separate worktree. It has not been integrated with the backend worktree or deployed. Vercel Preview and Production variables use the same Supabase integration; no database operation or live-data test has been made. Migration 13 remains unapplied and invitation acceptance disabled under DEC-021.
 
 The initial accepted integration did not change backend runtime behavior. The subsequent CEO-authorized TASK-STAB-005C integration imports only Antigravity's corrections in `src/lib/auth/business-config.ts` and `src/lib/actions/organization.ts`, plus three supporting unit-test files. The frontend, authentication, settings write actions, tenant guard, proxy, validations, migrations, database and live services are preserved. A further verified checkpoint of both worktrees precedes this import; see [corrections integration report](docs/reviews/TASK-STAB-005/CORRECTIONS-INTEGRATION-REPORT.md).
+
+On October 15 the CEO authorized Phase 1 frontend integration against Antigravity's finalized `/w/{tenantSlug}/...` contract, while keeping the two worktrees separate. The frontend passes `/settings/team` to the tenant guard as the public return subpath; the backend guard prefixes it for trusted Preview. The sole contract discrepancy found is that `getTeamRoster` returns only rows stored as `pending`, so the UI cannot include rows already stored as `expired` in its count. Production centralized sign-in remains the Phase 2 dependency. Vercel Deployment Protection and real-service authentication/data behavior remain unverified.
 
 ## Verification
 
@@ -68,7 +70,9 @@ After TASK-STAB-005C integration: **194/194 tests across 13 files**, TypeScript 
 - **Transactions:** Verify atomic organization/Headquarters/membership/subscription provisioning, rollback on failure, and database constraints without partial records.
 - **Authentication and workflows:** Verify real signup, confirmation, login, recovery, session/cookie behavior across workspace subdomains, organization switching, and Business Settings persistence/permissions.
 
-**Current boundary:** Prior local integration and the CEO-directed local-only TASK-STAB-005 pass are ACCEPTED under DEC-020. TASK-STAB-005C corrections remain READY_FOR_REVIEW. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED and mandatory before commercial deployment. The revised verification proposal remains separate and pending. TASK-TEAM-002 authorizes only a private non-production Preview push; no Production deployment, database change, or backend behavior change is authorized. All worktrees and recovery/report evidence remain preserved.
+**Current boundary:** Prior local integration and the CEO-directed local-only TASK-STAB-005 pass are ACCEPTED under DEC-020. TASK-STAB-005C corrections remain READY_FOR_REVIEW. TASK-TEAM-002 frontend Phase 1 is IN_PROGRESS for the CEO-requested Preview publication only. Real database/RLS/transaction/authentication checks are DEFERRED / NOT EXECUTED and mandatory before commercial deployment. No Production deployment, live mutation test, or backend behavior change is authorized. All worktrees and recovery/report evidence remain preserved.
+
+**November 16 Preview publication claim:** The CEO requested publication of the completed TASK-TEAM-002 frontend Phase 1 changes to its non-production Preview. Codex claimed the isolated task worktree for a commit and Preview deployment only. The Team page will remain read-only for writes: its Preview and Production Supabase integration is shared, and enabling mutation controls/server actions is outside this publication task. No live data writes, migrations, Production deployment, or unrelated worktree changes are authorized.
 
 ## Team Management milestone acceptance
 

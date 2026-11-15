@@ -11,7 +11,7 @@ const stub = `
 import React from 'react';
 export const useRouter=()=>({push:p=>window.__qa.navigation.push(p),refresh:()=>{}});
 export const useSearchParams=()=>new URLSearchParams(location.search);
-export const usePathname=()=>new URLSearchParams(location.search).get('screen')==='team'?'/settings/team':location.pathname==='/settings'||new URLSearchParams(location.search).get('screen')==='settings'?'/settings':'/';
+export const usePathname=()=>location.pathname.startsWith('/w/')?location.pathname:new URLSearchParams(location.search).get('screen')==='team'?'/settings/team':location.pathname==='/settings'||new URLSearchParams(location.search).get('screen')==='settings'?'/settings':'/';
 export default function Element({children,priority,fill,prefetch,replace,scroll,...props}){return React.createElement(props.src?'img':'a',props,children)}
 async function reply(name,input) {
  window.__qa.calls.push({name,input});
@@ -44,7 +44,12 @@ const bundled = await build({
  }}],
 });
 const processed = await postcss([tailwind({base:root})]).process(await readFile(path.join(root,'src/app/globals.css'),'utf8'),{from:path.join(root,'src/app/globals.css')});
-const media = process.env.STACK37_REVIEW_FONT_DIR || path.join(root,'.next/dev/static/media');
+const mediaCandidates = [process.env.STACK37_REVIEW_FONT_DIR, path.join(root,'.next/dev/static/media'), path.resolve(root,'../../.next/dev/static/media')].filter(Boolean);
+let media;
+for (const candidate of mediaCandidates) {
+ try { await readdir(candidate); media = candidate; break; } catch {}
+}
+if (!media) throw new Error('Review font assets are unavailable; set STACK37_REVIEW_FONT_DIR to the Next.js generated font directory.');
 const fonts = await readdir(media);
 const sans = fonts.find(f=>f.startsWith('caa3a2')&&f.endsWith('.woff2'));
 const mono = fonts.find(f=>f.startsWith('797e43')&&f.endsWith('.woff2'));

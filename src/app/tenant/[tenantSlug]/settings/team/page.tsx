@@ -8,6 +8,7 @@ import {
   revokeStaffAccessAction,
 } from '../../../../../lib/actions/team';
 import { TeamManagement } from '../../../../../components/tenant/team-management';
+import { getTeamReturnPath } from '../../../../../components/tenant/workspace-paths';
 
 export const metadata: Metadata = {
   title: 'Team — My Business by STACK37',
@@ -18,7 +19,8 @@ export const revalidate = 0;
 
 export default async function TeamSettingsPage(props: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await props.params;
-  const returnPath = `/tenant/${tenantSlug}/settings/team`;
+  const returnPath = getTeamReturnPath();
+  const teamRoutePath = `/tenant/${tenantSlug}/settings/team`;
   const access = await requireTenantAccess(tenantSlug, returnPath);
   if (!access.authorized) return null;
 
@@ -41,7 +43,7 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
     }
 
     const response = await inviteStaffAction({ organizationId: currentAccess.context.organization.id, ...input });
-    if (response.success) revalidatePath(returnPath);
+    if (response.success) revalidatePath(teamRoutePath);
     return {
       success: response.success,
       error: response.error,
@@ -56,7 +58,7 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
     const response = await revokeStaffAccessAction({ organizationId: currentAccess.context.organization.id, ...input });
-    if (response.success) revalidatePath(returnPath);
+    if (response.success) revalidatePath(teamRoutePath);
     return response;
   }
 
@@ -65,7 +67,7 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
     const response = await cancelInvitationAction({ organizationId: currentAccess.context.organization.id, ...input });
-    if (response.success) revalidatePath(returnPath);
+    if (response.success) revalidatePath(teamRoutePath);
     return response;
   }
 
@@ -74,6 +76,7 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
       organizationName={organization.name}
       roster={roster}
       rosterError={result.success ? undefined : result.error}
+      previewReadOnly={process.env.VERCEL_ENV === 'preview'}
       actions={{
         invite: process.env.NODE_ENV === 'development' ? invite : undefined,
         updateMember,

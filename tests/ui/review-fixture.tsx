@@ -26,6 +26,7 @@ declare global {
 window.__qa = { mode: 'success', calls: [], navigation: [] };
 const params = new URLSearchParams(location.search);
 const screen = params.get('screen') || (location.pathname === '/settings' ? 'settings' : 'overview');
+const previewReadOnly = params.get('preview') === '1';
 const organizations = [
   { id:'org-1', name:'Serendib Supply Company', slug:'serendib', provisioning_status:'ready', is_owner:true, status:'active' },
   { id:'org-2', name:'Northline Traders', slug:'northline', provisioning_status:'ready', is_owner:false, status:'active' },
@@ -82,7 +83,7 @@ else if (screen === 'directory') content = <><header className="app-header"><div
 else if (screen === 'denied') content = <TenantAccessDenied tenantSlug="serendib" reason="not_a_member" userEmail="member@example.test" />;
 else if (screen.startsWith('invitation')) content = <div className="min-h-screen bg-slate-50"><header className="border-b border-brand-line bg-white"><div className="app-container py-4"><Brand compact /></div></header><InvitationAcceptance invitation={invitationStates[screen.split('-')[1] as keyof typeof invitationStates] || invitationStates.valid} onAccept={async(input)=>{window.__qa.calls.push({name:'acceptInvitation',input});return {success:true,emailConfirmationRequired:true,error:'Check your inbox to verify this email address.'}}} reviewMode /></div>;
 else content = <WorkspaceFrame organization={organizations[0]} organizations={organizations} host="localhost:3002" email="owner@example.test" isOwner={config.canEdit} accountActions={<Button variant="outline" size="sm">Sign out</Button>}>
-  {screen === 'settings' ? <><p className="eyebrow mb-3">Business settings</p><h1 className="mb-2 text-3xl font-semibold tracking-tight">Business settings</h1><p className="mb-8 text-sm text-slate-600">Business profile and operating details.</p><BusinessConfigurationForm initialData={config} /></> : screen === 'team' ? <TeamManagement organizationName={organizations[0].name} roster={teamRoster} actions={teamActions} reviewMode /> : <WorkspaceOverview organization={organizations[0]} membership={{is_owner:true,status:'active'}} data={data} />}
+  {screen === 'settings' ? <><p className="eyebrow mb-3">Business settings</p><h1 className="mb-2 text-3xl font-semibold tracking-tight">Business settings</h1><p className="mb-8 text-sm text-slate-600">Business profile and operating details.</p><BusinessConfigurationForm initialData={config} /></> : screen === 'team' ? <TeamManagement organizationName={organizations[0].name} roster={teamRoster} actions={teamActions} previewReadOnly={previewReadOnly} reviewMode /> : <WorkspaceOverview organization={organizations[0]} membership={{is_owner:true,status:'active'}} data={data} />}
 </WorkspaceFrame>;
 createRoot(document.getElementById('root')!).render(<>
   <div className="flex flex-wrap items-center gap-3 border-b border-slate-300 bg-slate-100 p-3 text-xs text-slate-700">

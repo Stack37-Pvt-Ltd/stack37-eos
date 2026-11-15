@@ -56,11 +56,12 @@ function Status({ status }: { status: 'active' | 'suspended' | 'pending' | 'expi
   return <span className={`inline-flex items-center gap-1.5 border px-2 py-1 text-xs font-medium capitalize ${styles[status]}`}><span className="h-1.5 w-1.5 bg-current" aria-hidden="true" />{status}</span>;
 }
 
-export function TeamManagement({ organizationName, roster, rosterError, actions, reviewMode = false }: {
+export function TeamManagement({ organizationName, roster, rosterError, actions, previewReadOnly = false, reviewMode = false }: {
   organizationName: string;
   roster: TeamRoster | null;
   rosterError?: string;
   actions?: TeamActions;
+  previewReadOnly?: boolean;
   reviewMode?: boolean;
 }) {
   const [query, setQuery] = React.useState('');
@@ -72,8 +73,14 @@ export function TeamManagement({ organizationName, roster, rosterError, actions,
   const [actionError, setActionError] = React.useState('');
   const [notice, setNotice] = React.useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const [inviteUrl, setInviteUrl] = React.useState<string | null>(null);
-  const canManage = Boolean(roster?.canManageTeam && actions);
+  const mutationHelpId = React.useId();
+  const canManage = Boolean(!previewReadOnly && roster?.canManageTeam && actions);
   const canInvite = Boolean(canManage && actions?.invite);
+  const mutationUnavailableReason = previewReadOnly
+    ? 'Team changes are disabled in this Vercel Preview to protect shared live records.'
+    : roster?.canManageTeam
+      ? 'This operation is unavailable in the current environment.'
+      : 'Your current workspace access does not allow team changes.';
   const members = roster?.members ?? [];
   const invites = roster?.pendingInvitations ?? [];
   const filtered = members.filter((member) => {
@@ -84,14 +91,15 @@ export function TeamManagement({ organizationName, roster, rosterError, actions,
   const currentInvites = invites.filter((invite) => new Date(invite.expiresAt).valueOf() > Date.now());
 
   function requestAction(member: TeamMember, action: 'suspend' | 'reinstate' | 'remove') {
-    if (member.isOwner) return;
+    if (member.isOwner || !canManage) return;
     setActionTarget(member); setActionKind(action); setNotice(null); setActionError('');
   }
   function requestCancel(invitation: TeamInvitation) {
+    if (!canManage) return;
     setActionTarget(invitation); setActionKind('cancel'); setNotice(null); setActionError('');
   }
   async function confirmAction() {
-    if (!actionTarget || !actions || busy) return;
+    if (!actionTarget || !actions || !canManage || busy) return;
     setBusy(true); setNotice(null); setActionError('');
     try {
       const result = 'membershipId' in actionTarget
@@ -106,42 +114,45 @@ export function TeamManagement({ organizationName, roster, rosterError, actions,
     } finally { setBusy(false); }
   }
 
-  return <div className="space-y-8">
+  return <div className="min-w-0 space-y-8">
     <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="eyebrow mb-3">People & access</p><h1 className="text-3xl font-semibold tracking-tight text-brand-navy">Team</h1><p className="mt-2 max-w-2xl text-sm text-slate-600">Manage who can access {organizationName}.</p></div>
-      <Button onClick={() => { setInviteOpen(true); setNotice(null); setInviteUrl(null); }} disabled={!canInvite} title={!canInvite ? 'Invitation delivery is unavailable in this environment.' : undefined}><MailPlus aria-hidden="true" className="h-4 w-4" />Invite employee</Button>
+      <Button onClick={() => { if (!canInvite) return; setInviteOpen(true); setNotice(null); setInviteUrl(null); }} disabled={!canInvite} aria-describedby={!canInvite ? mutationHelpId : undefined}><MailPlus aria-hidden="true" className="h-4 w-4" />Invite employee</Button>
     </div>
 
     {notice && <Alert variant={notice.kind} title={notice.kind === 'success' ? 'Updated' : 'Action needs attention'}>{notice.message}{inviteUrl && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input aria-label="One-time invitation link" readOnly value={inviteUrl} className="min-h-10 min-w-0 flex-1 border border-slate-300 bg-white px-3 text-xs text-slate-700" /><Button variant="outline" size="sm" onClick={async () => { try { await navigator.clipboard.writeText(inviteUrl); setNotice({ kind: 'success', message: 'Invitation link copied. Share it only with the invited employee.' }); } catch { setNotice({ kind: 'error', message: 'Could not copy the invitation link. Select and copy it manually.' }); } }}><Copy aria-hidden="true" className="h-4 w-4" />Copy link</Button></div>}</Alert>}
+    {previewReadOnly && <Alert variant="info" title="Read-only preview">Team changes are disabled here to protect shared live records. Invitations, role and branch assignments, cancellation, suspension, reinstatement, and removal are unavailable.</Alert>}
     {!roster && (rosterError
       ? <Alert variant="error" title="Team data unavailable">{rosterError}</Alert>
       : <Alert variant="info" title="Team connection pending">This workspace is not connected to the Team Management service yet. No changes can be submitted.</Alert>)}
     {roster && !roster.canManageTeam && <Alert variant="info" title="View only">Your current access does not allow team changes.</Alert>}
+    {(!canManage || !canInvite) && <p id={mutationHelpId} className="sr-only">{mutationUnavailableReason}</p>}
 
-    <section aria-labelledby="team-members-heading" className="border border-brand-line bg-white">
+    <section aria-labelledby="team-members-heading" className="min-w-0 border border-brand-line bg-white">
       <div className="flex flex-col gap-4 border-b border-brand-line p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div><h2 id="team-members-heading" className="text-base font-semibold text-brand-navy">Employees</h2><p className="mt-1 text-sm text-slate-500">{members.length} {members.length === 1 ? 'person' : 'people'} with workspace access</p></div>
+        <div><h2 id="team-members-heading" className="text-base font-semibold text-brand-navy">Employees</h2><p className="mt-1 text-sm text-slate-500">{roster ? `${members.length} ${members.length === 1 ? 'person' : 'people'} with workspace access` : 'Team roster unavailable'}</p></div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="relative"><span className="sr-only">Search employees</span><Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search team" className="min-h-10 w-full border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-blue sm:w-56" /></label>
           <label className="relative"><span className="sr-only">Filter by status</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="min-h-10 w-full appearance-none border border-slate-300 bg-white py-2 pl-3 pr-9 text-sm text-slate-700 outline-none focus:border-brand-blue sm:w-36"><option value="all">All status</option><option value="active">Active</option><option value="suspended">Suspended</option></select><ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" /></label>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead><tr className="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500"><th className="px-6 py-3">Employee</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Branch</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Joined</th><th className="px-4 py-3"><span className="sr-only">Actions</span></th></tr></thead>
-          <tbody className="divide-y divide-slate-100">{filtered.map((member) => <tr key={member.membershipId} className="text-slate-700 hover:bg-slate-50/70"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">{(member.fullName || member.email).slice(0, 1).toUpperCase()}</span><span className="min-w-0"><span className="flex items-center gap-2 font-medium text-brand-navy">{member.fullName || 'Name not provided'}{member.isOwner && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500"><Shield aria-hidden="true" className="h-3 w-3" />Primary Owner</span>}</span><span className="block truncate text-xs text-slate-500">{member.email}</span></span></div></td><td className="px-4 py-4">{member.roles.map((role) => role.name).join(', ') || '—'}</td><td className="px-4 py-4">{member.branches.map((branch) => branch.name).join(', ') || 'All branches'}</td><td className="px-4 py-4"><Status status={member.status} /></td><td className="px-4 py-4 whitespace-nowrap text-slate-500">{dateLabel(member.joinedAt)}</td><td className="px-4 py-4 text-right">{member.isOwner ? <span className="text-xs text-slate-400">Protected</span> : <div className="relative inline-flex gap-1"><Button variant="ghost" size="sm" disabled={!canManage} aria-label={`Suspend or reinstate ${member.fullName || member.email}`} onClick={() => requestAction(member, member.status === 'active' ? 'suspend' : 'reinstate')}>{member.status === 'active' ? 'Suspend' : 'Reinstate'}</Button><Button variant="ghost" size="sm" disabled={!canManage} aria-label={`Remove ${member.fullName || member.email}`} onClick={() => requestAction(member, 'remove')}><MoreHorizontal className="h-4 w-4" /></Button></div>}</td></tr>)}
-            {filtered.length === 0 && <tr><td colSpan={6} className="px-6 py-12 text-center"><Users aria-hidden="true" className="mx-auto h-5 w-5 text-slate-400" /><p className="mt-3 text-sm font-medium text-slate-700">{query || statusFilter !== 'all' ? 'No matching employees' : roster ? 'No employees yet' : 'Employee list unavailable'}</p><p className="mt-1 text-xs text-slate-500">{query || statusFilter !== 'all' ? 'Try another search or status.' : roster ? 'Invite a teammate to give them access.' : rosterError || 'Connect the team service to load workspace members.'}</p></td></tr>}
+      <div className="w-full min-w-0 max-w-full overflow-x-auto overscroll-x-contain">
+        <table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead><tr className="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500"><th scope="col" className="px-6 py-3">Employee</th><th scope="col" className="px-4 py-3">Role</th><th scope="col" className="px-4 py-3">Branch</th><th scope="col" className="px-4 py-3">Status</th><th scope="col" className="px-4 py-3">Joined</th><th scope="col" aria-label="Actions" className="px-4 py-3"></th></tr></thead>
+          <tbody className="divide-y divide-slate-100">{filtered.map((member) => <tr key={member.membershipId} className="text-slate-700 hover:bg-slate-50/70"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">{(member.fullName || member.email).slice(0, 1).toUpperCase()}</span><span className="min-w-0"><span className="flex items-center gap-2 font-medium text-brand-navy">{member.fullName || 'Name not provided'}{member.isOwner && <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500"><Shield aria-hidden="true" className="h-3 w-3" />Primary Owner</span>}</span><span className="block truncate text-xs text-slate-500">{member.email}</span></span></div></td><td className="px-4 py-4">{member.roles.map((role) => role.name).join(', ') || '—'}</td><td className="px-4 py-4">{member.branches.map((branch) => branch.name).join(', ') || 'All branches'}</td><td className="px-4 py-4"><Status status={member.status} /></td><td className="px-4 py-4 whitespace-nowrap text-slate-500">{dateLabel(member.joinedAt)}</td><td className="px-4 py-4 text-right">{member.isOwner ? <span className="text-xs text-slate-400">Protected</span> : <div className="relative inline-flex gap-1"><Button variant="ghost" size="sm" disabled={!canManage} aria-describedby={!canManage ? mutationHelpId : undefined} aria-label={`Suspend or reinstate ${member.fullName || member.email}`} onClick={() => requestAction(member, member.status === 'active' ? 'suspend' : 'reinstate')}>{member.status === 'active' ? 'Suspend' : 'Reinstate'}</Button><Button variant="ghost" size="sm" disabled={!canManage} aria-describedby={!canManage ? mutationHelpId : undefined} aria-label={`Remove ${member.fullName || member.email}`} onClick={() => requestAction(member, 'remove')}><MoreHorizontal className="h-4 w-4" /></Button></div>}</td></tr>)}
+            {roster && filtered.length === 0 && <tr><td colSpan={6} className="px-6 py-12 text-center"><Users aria-hidden="true" className="mx-auto h-5 w-5 text-slate-400" /><p className="mt-3 text-sm font-medium text-slate-700">{query || statusFilter !== 'all' ? 'No matching employees' : 'No employees yet'}</p><p className="mt-1 text-xs text-slate-500">{query || statusFilter !== 'all' ? 'Try another search or status.' : canInvite ? 'Invite a teammate to give them access.' : 'No employees currently have access to this workspace.'}</p></td></tr>}
+            {!roster && <tr><td colSpan={6} className="px-6 py-12 text-center"><Users aria-hidden="true" className="mx-auto h-5 w-5 text-slate-400" /><p className="mt-3 text-sm font-medium text-slate-700">Employee list unavailable</p><p className="mt-1 text-xs text-slate-500">{rosterError || 'Connect the team service to load workspace members.'}</p></td></tr>}
           </tbody></table>
       </div>
     </section>
 
-    <section aria-labelledby="pending-heading" className="border border-brand-line bg-white">
-      <div className="flex items-center justify-between border-b border-brand-line p-5 sm:px-6"><div><h2 id="pending-heading" className="text-base font-semibold text-brand-navy">Invitations</h2><p className="mt-1 text-sm text-slate-500">People invited to join this workspace.</p></div><span className="border border-slate-200 px-2 py-1 text-xs text-slate-600">{roster ? `${invites.length} pending` : 'Unavailable'}</span></div>
-      <div className="divide-y divide-slate-100">{[...currentInvites, ...expiredInvites].map((invite) => { const expired = new Date(invite.expiresAt).valueOf() <= Date.now(); return <div key={invite.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="min-w-0"><p className="truncate text-sm font-medium text-brand-navy">{invite.email}</p><p className="mt-1 text-xs text-slate-500">{invite.roleName} <span className="px-1 text-slate-300">·</span> {invite.branchName || 'All branches'}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="flex items-center gap-3"><Status status={expired ? 'expired' : 'pending'} /><span className="text-xs text-slate-500">{expired ? `Expired ${dateLabel(invite.expiresAt)}` : `Expires ${dateLabel(invite.expiresAt)}`}</span></div><Button variant="outline" size="sm" disabled={!canManage} onClick={() => requestCancel(invite)}>Cancel</Button></div></div>; })}
+    <section aria-labelledby="pending-heading" className="min-w-0 border border-brand-line bg-white">
+      <div className="flex flex-col gap-3 border-b border-brand-line p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><h2 id="pending-heading" className="text-base font-semibold text-brand-navy">Invitations</h2><p className="mt-1 text-sm text-slate-500">People invited to join this workspace.</p></div>{roster ? <div className="flex flex-wrap gap-2" aria-label={`${currentInvites.length} pending invitations and ${expiredInvites.length} expired invitations`}><span className="border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-900">{currentInvites.length} pending</span><span className="border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">{expiredInvites.length} expired</span></div> : <span className="border border-slate-200 px-2 py-1 text-xs text-slate-600">Unavailable</span>}</div>
+      <div className="divide-y divide-slate-100">{[...currentInvites, ...expiredInvites].map((invite) => { const expired = new Date(invite.expiresAt).valueOf() <= Date.now(); return <div key={invite.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="min-w-0"><p className="truncate text-sm font-medium text-brand-navy">{invite.email}</p><p className="mt-1 text-xs text-slate-500">{invite.roleName} <span className="px-1 text-slate-300">·</span> {invite.branchName || 'All branches'}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="flex items-center gap-3"><Status status={expired ? 'expired' : 'pending'} /><span className="text-xs text-slate-500">{expired ? `Expired ${dateLabel(invite.expiresAt)}` : `Expires ${dateLabel(invite.expiresAt)}`}</span></div><Button variant="outline" size="sm" disabled={!canManage} aria-describedby={!canManage ? mutationHelpId : undefined} onClick={() => requestCancel(invite)}>Cancel</Button></div></div>; })}
         {invites.length === 0 && <div className="px-6 py-8 text-sm text-slate-500">{roster ? 'No pending invitations.' : 'Invitation list unavailable.'}</div>}
       </div>
     </section>
 
-    {inviteOpen && <InviteDialog roles={roster?.availableRoles ?? []} branches={roster?.availableBranches ?? []} busy={busy} onClose={() => setInviteOpen(false)} onSubmit={async (input) => { if (!actions?.invite || busy) return { success: false, error: 'Invitation delivery is unavailable.' }; setBusy(true); setNotice(null); setInviteUrl(null); try { const result = await actions.invite(input); if (result.success) { setNotice({ kind: 'success', message: result.inviteUrl ? `Invitation created for ${input.email}. Share this one-time link securely.` : `Invitation created for ${input.email}. Email delivery is not configured.` }); setInviteUrl(result.inviteUrl ?? null); setInviteOpen(false); } return result; } catch { return { success: false, error: 'The invitation could not be created. Try again.' }; } finally { setBusy(false); } }} />}
+    {inviteOpen && canInvite && <InviteDialog roles={roster?.availableRoles ?? []} branches={roster?.availableBranches ?? []} busy={busy} onClose={() => setInviteOpen(false)} onSubmit={async (input) => { if (previewReadOnly || !canInvite || !actions?.invite || busy) return { success: false, error: mutationUnavailableReason }; setBusy(true); setNotice(null); setInviteUrl(null); try { const result = await actions.invite(input); if (result.success) { setNotice({ kind: 'success', message: result.inviteUrl ? `Invitation created for ${input.email}. Share this one-time link securely.` : `Invitation created for ${input.email}. Email delivery is not configured.` }); setInviteUrl(result.inviteUrl ?? null); setInviteOpen(false); } return result; } catch { return { success: false, error: 'The invitation could not be created. Try again.' }; } finally { setBusy(false); } }} />}
     {actionTarget && <ConfirmDialog targetName={'fullName' in actionTarget ? actionTarget.fullName || actionTarget.email : actionTarget.email} action={actionKind} busy={busy} error={actionError} onClose={() => setActionTarget(null)} onConfirm={confirmAction} />}
     {reviewMode && <p className="text-xs text-slate-400">Local visual review · mock data and actions</p>}
   </div>;

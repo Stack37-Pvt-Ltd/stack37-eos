@@ -32,7 +32,7 @@ export function WorkspaceFrame({ children, organization, organizations, host, em
         </div>
       </header>
       <WorkspaceNavigation />
-      <main id="main-content" className="app-container py-8 sm:py-10">{children}</main>
+      <main id="main-content" className="app-container min-w-0 overflow-x-clip py-8 sm:py-10">{children}</main>
     </div>
   );
 }

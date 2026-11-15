@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Building2, Check, ChevronsUpDown, ExternalLink, Plus } from 'lucide-react';
 import { UserOrganization, getTenantWorkspaceUrl } from '../../lib/auth/tenant-utils';
 
@@ -12,12 +13,18 @@ export interface OrganizationSwitcherProps {
   currentHost?: string;
 }
 
+export function getOrganizationWorkspaceHref(slug: string, pathname: string, currentHost = '') {
+  if (/^\/w\/[^/]+(?:\/|$)/.test(pathname)) return `/w/${encodeURIComponent(slug)}/`;
+  return getTenantWorkspaceUrl(slug, currentHost);
+}
+
 export function OrganizationSwitcher({
   currentSlug,
   currentOrgName,
   organizations,
   currentHost = '',
 }: OrganizationSwitcherProps) {
+  const pathname = usePathname() || '';
   const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -70,7 +77,7 @@ export function OrganizationSwitcher({
           <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
             {organizations.map((org) => {
               const isCurrent = org.slug === currentSlug;
-              const targetUrl = getTenantWorkspaceUrl(org.slug, currentHost);
+              const targetUrl = getOrganizationWorkspaceHref(org.slug, pathname, currentHost);
 
               return (
                 <a
