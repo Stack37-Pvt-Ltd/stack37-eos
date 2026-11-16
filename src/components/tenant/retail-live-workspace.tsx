@@ -5,18 +5,27 @@ import { useRouter } from 'next/navigation';
 import { Alert } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ProductDraftReview } from './product-draft-review';
+import { isRetailModuleSection, RetailModulePanel, RetailModuleTabs, type RetailModuleSection } from './retail-module-sections';
 import { adjustInventoryAction, recordRetailSaleAction } from '../../lib/actions/retail';
 
 type Branch = { id: string; name: string };
 type Product = { id: string; name: string; sku: string; barcode: string | null; selling_price: number; quantity: number };
 type Dashboard = { salesToday: number; grossSalesToday: number; itemsSoldToday: number; activeProducts: number; lowStockProducts: number; pendingDraftReviews: number; currency: string };
+type RetailView = 'overview' | 'pos' | 'inventory' | 'drafts' | RetailModuleSection;
+
+const coreRetailSections = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'pos', label: 'Point of sale' },
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'drafts', label: 'Product drafts' },
+] as const;
 
 export function RetailLiveWorkspace({ organizationId, organizationSlug, organizationName, branchId, branches, products, dashboard, inventoryPermission, salesPermission, loadError }: {
   organizationId: string; organizationSlug: string; organizationName: string; branchId: string | null; branches: Branch[];
   products: Product[]; dashboard: Dashboard | null; inventoryPermission: boolean; salesPermission: boolean; loadError?: string;
 }) {
   const router = useRouter();
-  const [view, setView] = React.useState<'overview' | 'pos' | 'inventory' | 'drafts'>('overview');
+  const [view, setView] = React.useState<RetailView>('overview');
   const [search, setSearch] = React.useState('');
   const [basket, setBasket] = React.useState<Record<string, number>>({});
   const [payment, setPayment] = React.useState<'cash' | 'external_card'>('cash');
@@ -58,7 +67,12 @@ export function RetailLiveWorkspace({ organizationId, organizationSlug, organiza
     <header className="flex flex-col gap-4 border-b border-brand-line pb-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow mb-2">Retail &amp; E-Commerce</p><h1 className="text-3xl font-semibold tracking-tight text-brand-navy">Store operations</h1><p className="mt-2 text-sm text-slate-600">{organizationName} · branch stock and sales</p></div>
       <label className="block space-y-1 text-xs font-medium text-slate-600">Operating branch<select aria-label="Operating branch" value={branchId || ''} onChange={(event) => router.push(`/w/${encodeURIComponent(organizationSlug)}/retail?branch=${encodeURIComponent(event.target.value)}`)} className="min-h-11 w-full border border-slate-300 bg-white px-3 text-sm text-brand-navy sm:min-w-56">{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
     </header>
-    <nav aria-label="Retail sections" className="flex flex-wrap gap-2 border-b border-brand-line pb-3">{(['overview', 'pos', 'inventory', 'drafts'] as const).map((item) => <button key={item} type="button" aria-current={view === item ? 'page' : undefined} onClick={() => setView(item)} className={`min-h-10 border px-3 text-sm capitalize ${view === item ? 'border-brand-blue bg-blue-50 font-semibold text-brand-navy' : 'border-brand-line bg-white text-slate-600'}`}>{item === 'pos' ? 'Point of sale' : item === 'drafts' ? 'Product drafts' : item}</button>)}</nav>
+    <div role="group" aria-label="Retail sections" className="max-w-full overflow-x-auto border-b border-brand-line pb-3">
+      <div className="flex w-max min-w-full flex-nowrap gap-2">
+        {coreRetailSections.map(({ id, label }) => <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)} className={`min-h-10 shrink-0 border px-3 text-sm ${view === id ? 'border-brand-blue bg-blue-50 font-semibold text-brand-navy' : 'border-brand-line bg-white text-slate-600'}`}>{label}</button>)}
+        <RetailModuleTabs selected={view} onSelect={setView} />
+      </div>
+    </div>
     {notice && <Alert variant={notice.kind} title={notice.kind === 'success' ? 'Saved' : 'Needs attention'}>{notice.message}</Alert>}
     {loadError && <Alert variant="warning" title="Retail data unavailable">{loadError} Check that the reviewed retail migration has been applied to this environment. No sample totals are shown.</Alert>}
     {!branchId && <Alert variant="info" title="No assigned branch">This account is not assigned to a retail branch. Ask a workspace administrator to assign a branch.</Alert>}
@@ -72,6 +86,7 @@ export function RetailLiveWorkspace({ organizationId, organizationSlug, organiza
         <aside className="space-y-4 border border-brand-line p-4"><h3 className="font-semibold text-brand-navy">Current sale</h3>{lines.length ? lines.map(({ product, quantity }) => <div key={product.id} className="flex justify-between gap-3 text-sm"><span className="min-w-0 truncate">{product.name} × {quantity}</span><span>{formatter.format(Number(product.selling_price) * quantity)}</span></div>) : <p className="text-sm text-slate-500">Add products to start a sale.</p>}<label className="block space-y-1 text-xs font-medium text-slate-600">Payment method<select value={payment} onChange={(event) => setPayment(event.target.value as typeof payment)} className="min-h-10 w-full border border-slate-300 bg-white px-2 text-sm"><option value="cash">Cash</option><option value="external_card">Card processed externally</option></select></label><div className="flex justify-between border-t border-brand-line pt-3 font-semibold"><span>Total before tax</span><span>{formatter.format(total)}</span></div><Button className="w-full" disabled={!salesPermission || !lines.length || busy} isLoading={busy} onClick={checkout}>Record sale</Button></aside></div></section>}
     {view === 'inventory' && <section className="space-y-4"><div><h2 className="text-xl font-semibold text-brand-navy">Branch inventory</h2><p className="mt-1 text-sm text-slate-600">Stock quantities are branch specific. New imported products start at zero until counted.</p></div>{!inventoryPermission && <Alert variant="warning">Your role can view stock but cannot change it. An administrator can grant inventory access.</Alert>}<div className="overflow-x-auto border border-brand-line"><table className="w-full min-w-[560px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Product</th><th className="px-4 py-3">SKU</th><th className="px-4 py-3">On hand</th><th className="px-4 py-3">Price</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{products.map((product) => <tr key={product.id} className="border-t border-brand-line"><td className="px-4 py-3">{product.name}</td><td className="px-4 py-3">{product.sku}</td><td className="px-4 py-3">{product.quantity}</td><td className="px-4 py-3">{formatter.format(Number(product.selling_price))}</td><td className="px-4 py-3"><Button variant="outline" size="sm" disabled={!inventoryPermission} onClick={() => { setAdjustTarget(product); setAdjustment(''); setReason(''); }}>Adjust stock</Button></td></tr>)}</tbody></table>{!products.length && <p className="p-5 text-sm text-slate-500">No active products are available.</p>}</div></section>}
     {view === 'drafts' && <ProductDraftReview organizationId={organizationId} organizationName={organizationName} />}
+    {isRetailModuleSection(view) ? <RetailModulePanel section={view} organizationSlug={organizationSlug} /> : null}
     {adjustTarget && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/45 p-4"><section role="dialog" aria-modal="true" aria-labelledby="stock-adjust-title" className="w-full max-w-md space-y-4 border border-slate-300 bg-white p-5"><h2 id="stock-adjust-title" className="text-xl font-semibold text-brand-navy">Adjust stock</h2><p className="text-sm text-slate-600">{adjustTarget.name} · current balance {adjustTarget.quantity}</p><form className="space-y-4" onSubmit={saveAdjustment}><label className="block space-y-1 text-sm">Quantity change<input required type="number" step="0.001" value={adjustment} onChange={(event) => setAdjustment(event.target.value)} className="min-h-11 w-full border border-slate-300 px-3" placeholder="Use a negative number to reduce stock"/></label><label className="block space-y-1 text-sm">Reason<input required minLength={3} maxLength={300} value={reason} onChange={(event) => setReason(event.target.value)} className="min-h-11 w-full border border-slate-300 px-3"/></label><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setAdjustTarget(null)}>Cancel</Button><Button type="submit" isLoading={busy}>Save adjustment</Button></div></form></section></div>}
   </div>;
 }

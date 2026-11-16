@@ -3,29 +3,22 @@
 import { useMemo, useState } from 'react';
 import {
   ArrowRight, BarChart3, Banknote, Boxes, CreditCard, LayoutDashboard, LockKeyhole,
-  ReceiptText, Search, ShieldCheck, ShoppingCart, Store, Tag, Truck, UserRound, Users, Wallet,
+  ReceiptText, Search, ShoppingCart, Truck,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ProductDraftReview } from './product-draft-review';
 import { RetailInventoryCatalog } from './retail-operations-ui';
+import { isRetailModuleSection, RetailModulePanel, retailModuleSections, type RetailModuleSection } from './retail-module-sections';
 
 const sections = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'pos', label: 'Point of sale', icon: ShoppingCart },
   { id: 'inventory', label: 'Inventory', icon: Boxes },
-  { id: 'purchasing', label: 'Purchasing', icon: Truck },
-  { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'employees', label: 'Employees', icon: UserRound },
-  { id: 'expenses', label: 'Expenses', icon: Wallet },
-  { id: 'branches', label: 'Branches', icon: Store },
-  { id: 'promotions', label: 'Loyalty & offers', icon: Tag },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'controls', label: 'Controls', icon: ShieldCheck },
+  ...retailModuleSections,
 ] as const;
 
-export type RetailSection = (typeof sections)[number]['id'];
-type RecordSection = Exclude<RetailSection, 'overview' | 'pos' | 'inventory'>;
+export type RetailSection = 'overview' | 'pos' | 'inventory' | RetailModuleSection;
 
 type DemoProduct = { id: string; name: string; barcode: string; price: number };
 type DemoPaymentMethod = 'cash' | 'card';
@@ -36,68 +29,6 @@ const DEMO_PRODUCTS: DemoProduct[] = [
   { id: 'demo-notebook', name: 'Everyday Notebook · A5', barcode: 'DEMO-0003', price: 950 },
   { id: 'demo-tote', name: 'Reusable Tote Bag', barcode: 'DEMO-0004', price: 1200 },
 ];
-
-interface ModuleDefinition {
-  title: string;
-  description: string;
-  action: string;
-  secondaryAction?: string;
-  search: string;
-  metrics: [string, string, string];
-  columns: [string, string, string, string];
-  detail: string;
-}
-
-const modules: Record<RecordSection, ModuleDefinition> = {
-  purchasing: {
-    title: 'Purchasing & suppliers', description: 'Organize suppliers, purchase orders and goods received.',
-    action: 'New purchase order', secondaryAction: 'Add supplier', search: 'Search orders or suppliers',
-    metrics: ['Open orders', 'Awaiting delivery', 'Suppliers'], columns: ['Order', 'Supplier', 'Date', 'Status'],
-    detail: 'Orders, supplier balances and receiving records will appear when purchasing is connected.',
-  },
-  customers: {
-    title: 'Customers', description: 'Keep customer details and purchase history together.',
-    action: 'Add customer', search: 'Search customer name or phone',
-    metrics: ['Customers', 'Recent customers', 'Purchase history'], columns: ['Customer', 'Contact', 'Last purchase', 'Status'],
-    detail: 'Customer profiles and purchase history will appear when customer management is connected.',
-  },
-  employees: {
-    title: 'Employees', description: 'Review team members, roles and operating locations.',
-    action: 'Add employee', search: 'Search team members',
-    metrics: ['Team members', 'Cashiers', 'Locations'], columns: ['Employee', 'Role', 'Location', 'Status'],
-    detail: 'Staff profiles and assignments will appear when employee management is connected.',
-  },
-  expenses: {
-    title: 'Expenses & petty cash', description: 'Track operating expenses and cash payouts.',
-    action: 'Record expense', search: 'Search expenses',
-    metrics: ['Expenses today', 'This month', 'Pending review'], columns: ['Expense', 'Category', 'Date', 'Amount'],
-    detail: 'Expenses and petty cash records will appear when this feature is connected.',
-  },
-  branches: {
-    title: 'Branches', description: 'See operating locations and their stock activity.',
-    action: 'Add branch', secondaryAction: 'Transfer stock', search: 'Search locations',
-    metrics: ['Locations', 'Stock transfers', 'Low-stock items'], columns: ['Location', 'Type', 'Stock activity', 'Status'],
-    detail: 'Location details and stock transfers will appear when branch operations are connected.',
-  },
-  promotions: {
-    title: 'Loyalty & offers', description: 'Manage customer rewards and retail promotions.',
-    action: 'Create promotion', search: 'Search offers',
-    metrics: ['Active offers', 'Loyalty members', 'Rewards'], columns: ['Offer', 'Applies to', 'Period', 'Status'],
-    detail: 'Offers and loyalty information will appear when promotions are connected.',
-  },
-  reports: {
-    title: 'Reports', description: 'Review sales, purchasing and inventory performance.',
-    action: 'Export report', search: 'Search reports',
-    metrics: ['Sales', 'Inventory value', 'Expenses'], columns: ['Report', 'Period', 'Location', 'Availability'],
-    detail: 'Reports will be available once the relevant operational data is connected.',
-  },
-  controls: {
-    title: 'Business controls', description: 'Review operational access, audit activity and till controls.',
-    action: 'Review controls', search: 'Search controls',
-    metrics: ['Access', 'Audit activity', 'Till reconciliation'], columns: ['Control', 'Area', 'Last activity', 'Status'],
-    detail: 'Control and reconciliation information will appear when those features are connected.',
-  },
-};
 
 export function RetailOperationsWorkspace({ organizationId, organizationSlug, organizationName, currencyCode, initialSection = 'overview' }: {
   organizationId: string;
@@ -145,7 +76,7 @@ export function RetailOperationsWorkspace({ organizationId, organizationSlug, or
               <ProductDraftReview organizationId={organizationId} organizationName={organizationName} />
             </section>
           ) : <RetailInventoryCatalog embedded state="unavailable" currencyCode={currencyCode} />
-            : <ModulePanel definition={modules[selected]} />}
+            : isRetailModuleSection(selected) ? <RetailModulePanel section={selected} organizationSlug={organizationSlug} /> : null}
     </div>
   );
 }
@@ -169,10 +100,6 @@ function Overview({ onSelect }: { onSelect: (section: RetailSection) => void }) 
       <div className="grid gap-5 lg:grid-cols-2"><UnavailableBlock title="Items to replenish" detail="Low-stock items will appear when inventory is connected." /><UnavailableBlock title="Recent activity" detail="Stock movements and sales will appear when operations are connected." /></div>
     </section>
   );
-}
-
-function MetricGrid({ labels }: { labels: readonly string[] }) {
-  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{labels.map((label) => <div key={label} className="min-w-0 border border-brand-line bg-white p-4"><p className="text-sm text-slate-600">{label}</p><p className="mt-4 text-xl font-semibold text-brand-navy">Unavailable</p><p className="mt-2 text-xs text-slate-500">Awaiting connected data</p></div>)}</div>;
 }
 
 function UnavailableBlock({ title, detail }: { title: string; detail: string }) {
@@ -310,12 +237,6 @@ function formatLkr(value: number) {
   return new Intl.NumberFormat('en-LK', { style: 'currency', currency: 'LKR' }).format(value);
 }
 
-function ModulePanel({ definition }: { definition: ModuleDefinition }) {
-  return (
-    <section aria-labelledby="module-title" className="min-w-0 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0"><p className="eyebrow mb-2">Retail & E-Commerce operations</p><h2 id="module-title" className="break-words text-2xl font-semibold tracking-tight">{definition.title}</h2><p className="mt-2 text-sm text-slate-600">{definition.description}</p></div><div className="flex flex-wrap gap-2">{definition.secondaryAction && <Button type="button" variant="outline" disabled aria-describedby="retail-connection-note">{definition.secondaryAction}</Button>}<Button type="button" disabled aria-describedby="retail-connection-note">{definition.action}</Button></div></div>
-      <MetricGrid labels={definition.metrics} />
-      <div className="border border-brand-line bg-white"><div className="border-b border-brand-line p-4"><label className="relative block max-w-md"><span className="sr-only">{definition.search}</span><Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" /><input type="search" placeholder={definition.search} disabled aria-describedby="retail-connection-note" className="min-h-11 w-full min-w-0 border border-brand-line bg-slate-50 py-2 pl-10 pr-3 text-sm text-slate-600" /></label></div><div className="max-w-full overflow-x-auto"><table className="w-full min-w-[560px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-600"><tr>{definition.columns.map((column) => <th key={column} scope="col" className="px-4 py-3 font-medium">{column}</th>)}</tr></thead><tbody><tr><td colSpan={definition.columns.length} className="px-4 py-9 text-center text-sm leading-6 text-slate-600">{definition.detail}</td></tr></tbody></table></div></div>
-    </section>
-  );
+function MetricGrid({ labels }: { labels: readonly string[] }) {
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{labels.map((label) => <div key={label} className="min-w-0 border border-brand-line bg-white p-4"><p className="text-sm text-slate-600">{label}</p><p className="mt-4 text-xl font-semibold text-brand-navy">Unavailable</p><p className="mt-2 text-xs text-slate-500">Awaiting connected data</p></div>)}</div>;
 }

@@ -3,8 +3,8 @@
 **Last updated:** November 16, 2026 (Asia/Colombo)
 **Branch:** `codex/task-uk-super-004-ops` (UK Super candidate; see task release plan)
 **Committed baseline:** `fccdefcc9217bfaac671eaf55694ffc55d2cda8b` (Retail data and category navigation correction)
-**Current task:** `TASK-UK-SUPER-004` — READY_FOR_REVIEW for the Preview correction; signed-in review and Production release gates remain open.
-**Evidence:** 198/198 local unit tests across 13 files, TypeScript, scoped ESLint, git diff check pass. No UK Super changes or migrations included. Zero commits, pushes, or deployments.
+**Current task:** `TASK-UK-SUPER-004` — IN_PROGRESS for CEO-authorized integration of the existing Retail module section shells into the active UK Super workspace; operational data connections and Production release gates remain open.
+**Evidence:** Current UK Super branch has frontend and previously approved migrations 15/16; this module-shell extension makes no database or live-data changes. The current extension passes 273/273 unit tests across 20 files, TypeScript, scoped ESLint, and `git diff --check`. Preview deployment for this extension is pending.
 
 ---
 
