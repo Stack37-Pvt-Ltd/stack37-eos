@@ -4,6 +4,7 @@ import { getBusinessConfiguration } from '../../../../lib/auth/business-config';
 import { requireTenantAccess } from '../../../../lib/auth/tenant-guard';
 import { supportsRetailOperations } from '../../../../lib/industry/category-features';
 import { createClient } from '../../../../lib/supabase/server';
+import { normalizeBranchRelation } from '../../../../lib/retail/branch-assignment';
 import { RetailLiveWorkspace } from '../../../../components/tenant/retail-live-workspace';
 
 export const dynamic = 'force-dynamic';
@@ -52,7 +53,7 @@ export default async function RetailOperationsPage(props: {
       supabase.from('membership_roles').select('role_id').eq('organization_id', organization.id).eq('membership_id', membership.id),
     ]);
     if (branchError) throw branchError;
-    branches = (assignments || []).flatMap((row) => (row.branches || []).map((branch) => ({ id: branch.id, name: branch.name })));
+    branches = (assignments || []).flatMap((row) => normalizeBranchRelation(row.branches));
     const roleIds = (memberRoles || []).map((row) => row.role_id);
     if (member?.is_owner) { inventoryPermission = true; salesPermission = true; }
     else if (roleIds.length) {

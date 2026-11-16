@@ -8,6 +8,8 @@
 
 **Current status:** Migrations 15 and 16 are live. Commits `50f0025c4fa2a25018e365ae8e5ff7b0fb33d813` and author-corrected follow-up `7e41f02cc3ea590f8e202b240ab478c5acb8ff7b` are pushed to the task branch. Preview deployment `dpl_145YHTSkUXz6b2qpDYwL2d2jBcmM` for `7e41f02` is READY. Production site remains unchanged.
 
+**Production authorization:** CEO approved deploying the UK Super candidate to Production on 16 November 2026. This authorizes the release action, subject to the mandatory go/no-go checks below; it does not satisfy checks that remain unverified.
+
 ## What is in the candidate
 
 The candidate connects the UK Super retail page to branch scoped product and stock reads, current dashboard totals, atomic sale recording and stock adjustment actions. It adds employee role/branch assignment, based on the existing staff invitation and access workflow. The point of sale accepts cash or a card payment marked as processed elsewhere. It does not handle card authorization, tax calculation, till reconciliation or legally approved receipts.
@@ -34,7 +36,7 @@ The 2–4 hour estimate is conditional on a successful build, protected Preview,
 |---|---|---|
 | Task branch and local scope | VERIFIED | Isolated branch and worktree created; shared worktrees preserved. |
 | TypeScript | VERIFIED | `npm run typecheck` passed. |
-| Unit tests | VERIFIED | 265/265 passed across 17 test files. |
+| Unit tests | VERIFIED | 270/270 passed across 19 test files after the Retail UI corrections on 16 November. |
 | Retail migration 16 logic | VERIFIED — IN MEMORY ONLY | PGlite test passed sale, adjustment, replay guard, stock rollback, dashboard, audit and role-seeding cases. Auth/permission helpers are stubs; no RLS/JWT proof. |
 | Scoped lint and whitespace | VERIFIED | ESLint and `git diff --check` passed for scoped files. |
 | Production build | VERIFIED ON VERCEL; LOCAL WINDOWS BUILD NEEDS WORK | Vercel remote build compiled, typechecked, generated 12/12 static pages and completed. Local Windows worker output still fails with `EPERM` creating `.next` route directories. |
@@ -42,12 +44,26 @@ The 2–4 hour estimate is conditional on a successful build, protected Preview,
 | Real Supabase RLS/JWT | NOT CHECKED | Docker Desktop cannot start and the Supabase CLI is unavailable. The isolated branch quote was $0.01344/hour and the CEO declined its creation. PGlite tests stub authorization helpers and do not prove RLS/JWT isolation. |
 | Email invitation delivery | NOT CHECKED | Provider credentials and actual delivery have not been exercised. |
 | Public Preview smoke | VERIFIED | `/login` returned HTTP 200. `/w/uk-super/retail` and `/w/uk-super/settings/team` both route unauthenticated visitors to the sign-in page. |
-| Authenticated browser flow, 375px and desktop | NOT CHECKED | Requires an authenticated test account; operational actions must be reviewed without writing unapproved business records. |
+| Authenticated browser flow, 375px and desktop | NEEDS WORK | The prior Preview build showed “Retail data unavailable” because the page treated the many-to-one embedded branch object as an array. A local fix and category-specific Retail tab are implemented and verified by unit tests; Preview redeployment and signed-in browser verification are pending. Team loaded after about 10 seconds and correctly showed Preview read-only mode. No operational action was submitted. Mobile review remains unchecked. |
 | Opening stock and sale policy | NEEDS CEO DECISION | All imported products have zero stock. A physical count is required. Tax and card processing remain external/unimplemented. |
 | Vercel Preview and production deployment | PREVIEW READY; PRODUCTION NOT STARTED | Preview deployment `dpl_145YHTSkUXz6b2qpDYwL2d2jBcmM` for commit `7e41f02` is READY and public routing smoke checks pass. The earlier deployment was blocked by its author email; the follow-up uses the verified GitHub identity. The Vercel CLI is unavailable. No production deployment has happened. |
+
+## Post-authorization check (16 November 2026)
+
+The CEO approved Production deployment. Before publishing, Codex re-ran `npm run typecheck` (passed) and `npm run test:unit` (265/265 passed in 17 files). Read-only SQL metadata checks against the live EOS database confirmed RLS is enabled on `inventory_balances`, `retail_sales`, `retail_sale_items`, and `stock_movements`. They also confirmed `adjust_inventory`, `record_retail_sale`, `update_staff_assignment`, and `get_retail_dashboard` are SECURITY DEFINER routines with an empty `search_path`, executable by `authenticated` and not `anon`. The migration source contains membership, permission, and branch-assignment checks inside these routines. These checks inspect schema/ACL metadata and source logic only; they do not simulate a real signed-in user's JWT or prove cross-tenant denial at runtime.
+
+Codex also inspected the already signed-in Vercel Preview session without submitting forms. `/w/uk-super/retail` displayed “Retail data unavailable” and “No assigned branch”; dashboard totals were unavailable. The Team page took about 10 seconds to finish loading, then displayed the primary-owner roster and the expected Preview read-only banner. A read-only aggregate query against live EOS found one UK Super branch, one active member, and one membership with a branch assignment. Retail's unavailable-data alert therefore needs a runtime query/configuration investigation. No form was submitted.
+
+The source inspection identified the Retail error: the `membership_branches.branch_id → branches` relation is many-to-one, so PostgREST returns an embedded branch as an object. The page called `.map()` on that object; its catch-all handler hid the TypeError and showed the misleading database/unassigned-branch alerts. The local correction normalizes either object or array shapes. The tenant layout already passed the business category into `WorkspaceFrame`, but the frame dropped it before `WorkspaceNavigation`; the local correction now adds the Retail & E-Commerce top-level tab only for that category. Other categories keep the existing navigation. The fixes are frontend-only.
+
+Local verification after correction: 270/270 unit tests across 19 files, TypeScript, scoped ESLint, and `git diff --check` passed. Preview redeployment and signed-in confirmation of the Retail page and category tab are pending.
+
+**Release decision: NOT DEPLOYED.** The release plan's mandatory go/no-go rule is not met: the signed-in Retail Preview check failed; Team loads slowly; real JWT/RLS and authenticated employee/owner role paths have not been exercised; invitation email delivery and mobile review remain unchecked; there is no approved physical opening-stock count; and a production backup/rollback check is not evidenced here. All product stock is seeded to zero, so checkout correctly cannot sell until a store operator enters physically counted stock. No production deployment, sale, stock adjustment, or invitation write was made in this check. Production remains on its prior deployment.
+
+**Next required step:** Publish this frontend correction to the authorized Preview branch and verify the Retail page and category-specific tab while signed in. Then the store operator/CEO supplies the approved opening-stock count and confirms pilot payment/tax/receipt handling; Codex completes the remaining security, mobile, backup, and rollback checks before the already-authorized Production deployment.
 
 ## Go/no-go rule
 
 Do not release if the build, isolated database tests, invitation flow, branch/role authorization, stock reconciliation, mobile layout, backup, or rollback check fails. The 2–4 hour window is achievable only if these checks pass without code changes and the required environments are already available. Current evidence does not support promising a safe live release inside that window.
 
-**Next action:** The candidate is ready for CEO review on Vercel Preview: `https://stack37-74n4a3m4t-stack37.vercel.app`. Before production, the CEO/store operator must supply an approved signed-in test account and confirm stock-count, tax, receipt, and payment handling; Codex can then verify the authenticated UI and security paths without creating unapproved sales or stock records. Production promotion remains pending, and the 2–4 hour estimate was conditional on these gates.
+**Next action:** The local fix is ready to publish to the authorized Vercel Preview branch. Verify the Retail route and category-specific tab there first. Production authorization is recorded, but Production remains held by the remaining go/no-go gates. The CEO/store operator then provides opening-stock count and pilot payment/tax/receipt decisions; Codex completes the remaining security, mobile, backup, and rollback checks and deploys after all gates pass. The 2–4 hour estimate was conditional on these gates.
