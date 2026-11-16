@@ -33,7 +33,7 @@ const config: BusinessConfigurationData = {
   organization: {
     id:'org-1', name:'Serendib Supply Company', slug:'serendib', legalName:'Serendib Supply (Pvt) Ltd', registrationNumber:'PV 123456', categoryId:'retail', categoryName:'Retail',
     countryCode:'LK', currency:'LKR', timezone:'Asia/Colombo', suggestedCurrency:'LKR', suggestedTimezone:'Asia/Colombo', taxId:'123456789', taxStatus:'standard',
-    contactEmail:'hello@example.test', contactPhone:'+94 11 123 4567', website:'https://example.test', addressLine1:'24 Galle Road', addressLine2:'', city:'Colombo', stateProvince:'Western', postalCode:'00300', createdAt:'2026-10-13',
+    contactEmail:'hello@example.test', contactPhone:'+94 11 123 4567', website:'https://example.test', addressLine1:'24 Galle Road', addressLine2:'', city:'Colombo', stateProvince:'Western', postalCode:'00300', uberCommissionRate:null, pickmeCommissionRate:null, createdAt:'2026-10-13',
   },
   headquartersBranch: { id:'hq-1', name:'Headquarters', code:'HQ', isHeadquarters:true, isOwnerAssigned:true, contactEmail:'hq@example.test', contactPhone:'+94 11 123 4567', addressLine1:'24 Galle Road', addressLine2:'', city:'Colombo', stateProvince:'Western', postalCode:'00300' },
   categories:[{id:'retail',name:'Retail'},{id:'services',name:'Services'}],

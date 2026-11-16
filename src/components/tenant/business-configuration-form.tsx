@@ -24,6 +24,8 @@ import {
   TAX_STATUSES,
 } from '../../lib/validations/organization';
 import type { BusinessConfigurationData } from '../../lib/auth/business-config';
+import { RetailCommissionRatesForm } from './retail-commission-rates-form';
+import { supportsRetailOperations } from '../../lib/industry/category-features';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -32,7 +34,7 @@ interface BusinessConfigurationFormProps {
 }
 
 export function BusinessConfigurationForm({ initialData }: BusinessConfigurationFormProps) {
-  const [activeTab, setActiveTab] = React.useState<'profile' | 'contact' | 'tax' | 'branch'>('profile');
+  const [activeTab, setActiveTab] = React.useState<'profile' | 'contact' | 'tax' | 'branch' | 'retailRates'>('profile');
 
   // Business Configuration Form State
   const [profile, setProfile] = React.useState({
@@ -79,6 +81,7 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
 
   const canEdit = initialData.canEdit;
   const categoryOptions = initialData.categories.filter((category) => UUID_PATTERN.test(category.id));
+  const retailSettingsEnabled = supportsRetailOperations(initialData.organization.categoryName);
 
   async function handleSaveBusiness(e: React.FormEvent) {
     e.preventDefault();
@@ -286,10 +289,31 @@ export function BusinessConfigurationForm({ initialData }: BusinessConfiguration
           <GitBranch className="h-4 w-4 text-blue-600" />
           <span>Headquarters</span>
         </button>
+        {retailSettingsEnabled && <button
+          type="button"
+          aria-pressed={activeTab === 'retailRates'}
+          aria-controls="settings-panel"
+          onClick={() => { setActiveTab('retailRates'); setSuccessMessage(null); setErrorMessage(null); }}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-none text-xs font-semibold transition-all ${
+            activeTab === 'retailRates'
+              ? 'bg-white text-slate-900 border border-slate-200/60'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Receipt className="h-4 w-4 text-blue-600" />
+          <span>Retail payment rates</span>
+        </button>}
       </div>
 
       {/* Main Tab Panels */}
-      {activeTab !== 'branch' ? (
+      {activeTab === 'retailRates' && retailSettingsEnabled ? (
+        <RetailCommissionRatesForm
+          organizationId={initialData.organization.id}
+          canEdit={canEdit}
+          uberRate={initialData.organization.uberCommissionRate}
+          pickmeRate={initialData.organization.pickmeCommissionRate}
+        />
+      ) : activeTab !== 'branch' ? (
       <form id="settings-panel" onSubmit={handleSaveBusiness} className="space-y-6" aria-busy={isSaving}>
           {/* TAB 1: Business identity */}
           {activeTab === 'profile' && (

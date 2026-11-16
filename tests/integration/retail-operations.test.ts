@@ -111,5 +111,39 @@ describe('TASK-UK-SUPER-004 isolated retail migration behavior', () => {
     await db.query(`SELECT private.provision_workspace_defaults('${newOrg}')`);
     const adminSeed = await db.query(`SELECT array_agg(rp.permission_id ORDER BY rp.permission_id) AS permissions FROM public.roles r JOIN public.role_permissions rp ON rp.organization_id = r.organization_id AND rp.role_id = r.id WHERE r.organization_id = '${newOrg}' AND r.name = 'Administrator'`) as { rows: Array<{ permissions: string[] }> };
     expect(adminSeed.rows[0].permissions).toEqual(['audit:read', 'inventory_edit', 'manage_invitations', 'manage_team', 'pos_checkout']);
+
+    const customerMigration = await readFile(path.resolve(process.cwd(), 'supabase/migrations/20261116100244_task_uk_super_005a_customer_directory.sql'), 'utf8');
+    const checkoutMigration = await readFile(path.resolve(process.cwd(), 'supabase/migrations/20261116111825_task_uk_super_005b_pos_checkout.sql'), 'utf8');
+    await db.exec(customerMigration);
+    await db.exec(checkoutMigration);
+    await expect(db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', 'a4000000-0000-4000-8000-00000000000a', 0, NULL, NULL, '[{"method":"uber","amount":1.25}]'::jsonb, '[{"product_id":"${ids.product}","quantity":1}]'::jsonb)`)).rejects.toThrow(/Set the Uber commission/);
+    await db.query(`SELECT public.update_retail_commission_rates('${ids.org}', 10, 12.5)`);
+    await db.exec(`SELECT set_config('test.user', '${ids.employeeUser}', false)`);
+    await expect(db.query(`SELECT public.update_retail_commission_rates('${ids.org}', 9, 9)`)).rejects.toThrow(/Primary Owner/);
+    await db.exec(`SELECT set_config('test.user', '${ids.owner}', false)`);
+    const completeKey = 'b1000000-0000-4000-8000-00000000000b';
+    const completeLines = JSON.stringify([{ product_id: ids.product, quantity: 2 }]);
+    const splitTenders = JSON.stringify([{ method: 'card', amount: 1 }, { method: 'uber', amount: 1.25 }]);
+    const completed = await db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', '${completeKey}', 10, 'Checkout Customer', '+94 77 123 4567', '${splitTenders}'::jsonb, '${completeLines}'::jsonb) AS result`) as { rows: Array<{ result: { receiptNumber: string; subtotal: number; discountAmount: number; total: number; paymentMethod: string; tenders: Array<{ method: string; amount: number }>; customer: { phone: string }; lines: Array<{ quantity: number }> } }> };
+    expect(completed.rows[0].result).toMatchObject({
+      subtotal: 2.5, discountAmount: 0.25, total: 2.25, paymentMethod: 'mixed',
+      customer: { phone: '+94771234567' },
+      tenders: [{ method: 'card', amount: 1 }, { method: 'uber', amount: 1.25 }],
+      providerSettlements: [{ provider: 'uber', commissionRate: 10, grossAmount: 1.25, commissionAmount: 0.13, netSettlement: 1.12 }],
+      lines: [{ quantity: 2 }],
+    });
+    expect(completed.rows[0].result.receiptNumber).toMatch(/^UKS-\d{8}-\d{7}$/);
+
+    const replayedCheckout = await db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', '${completeKey}', 10, 'Checkout Customer', '+94771234567', '${splitTenders}'::jsonb, '${completeLines}'::jsonb) AS result`) as { rows: Array<{ result: { replayed: boolean } }> };
+    expect(replayedCheckout.rows[0].result.replayed).toBe(true);
+    await expect(db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', '${completeKey}', 10, 'Different Customer', '+94771234567', '${splitTenders}'::jsonb, '${completeLines}'::jsonb)`)).rejects.toThrow(/different sale/);
+    await expect(db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', 'c1000000-0000-4000-8000-00000000000c', 20.01, 'Checkout Customer', '+94771234567', '${splitTenders}'::jsonb, '${completeLines}'::jsonb)`)).rejects.toThrow(/between 0 and 20/);
+    await expect(db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', 'd1000000-0000-4000-8000-00000000000d', 0, 'Checkout Customer', '+94771234567', '[{"method":"cash","amount":5}]'::jsonb, '${completeLines}'::jsonb)`)).rejects.toThrow(/exactly match/);
+    const guestCheckout = await db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', 'e1000000-0000-4000-8000-00000000000e', 0, NULL, NULL, '[{"method":"cash","amount":1.25}]'::jsonb, '[{"product_id":"${ids.product}","quantity":1}]'::jsonb) AS result`) as { rows: Array<{ result: { customer: unknown } }> };
+    expect(guestCheckout.rows[0].result.customer).toBeNull();
+    const pickmeCheckout = await db.query(`SELECT public.complete_retail_checkout('${ids.org}', '${ids.branch}', 'f1000000-0000-4000-8000-00000000000f', 0, NULL, NULL, '[{"method":"pickme","amount":1.25}]'::jsonb, '[{"product_id":"${ids.product}","quantity":1}]'::jsonb) AS result`) as { rows: Array<{ result: { providerSettlements: Array<{ provider: string; commissionRate: number; commissionAmount: number; netSettlement: number }> } }> };
+    expect(pickmeCheckout.rows[0].result.providerSettlements).toEqual([{ provider: 'pickme', commissionRate: 12.5, grossAmount: 1.25, commissionAmount: 0.16, netSettlement: 1.09 }]);
+    const finalStock = await db.query(`SELECT quantity FROM public.inventory_balances WHERE organization_id = '${ids.org}' AND branch_id = '${ids.branch}' AND product_id = '${ids.product}'`) as { rows: Array<{ quantity: string }> };
+    expect(finalStock.rows[0].quantity).toBe('4.500');
   }, 30000);
 });

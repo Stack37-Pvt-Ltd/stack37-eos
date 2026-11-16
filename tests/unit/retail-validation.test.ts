@@ -1,45 +1,68 @@
 import { describe, expect, it } from 'vitest';
-import { AdjustInventorySchema, RecordRetailSaleSchema, SearchRetailCustomersSchema, UpsertRetailCustomerSchema } from '../../src/lib/validations/retail';
+import { AdjustInventorySchema, CompleteRetailCheckoutSchema, SearchRetailCustomersSchema, UpdateRetailCommissionRatesSchema, UpsertRetailCustomerSchema } from '../../src/lib/validations/retail';
 
 const ids = {
   organizationId: '10000000-0000-4000-8000-000000000001',
   branchId: '20000000-0000-4000-8000-000000000002',
-  productId: '30000000-0000-4000-8000-000000000003',
   idempotencyKey: '40000000-0000-4000-8000-000000000004',
+  customer: { name: 'Alice', phone: '+94 77 123 4567' },
+  discountPercent: 10,
+  tenders: [{ method: 'cash' as const, amount: 90 }],
+  lines: [{ productId: '30000000-0000-4000-8000-000000000003', quantity: 1 }],
 };
 
 describe('retail operation validation', () => {
-  it('accepts a fractional-weight checkout quantity up to three decimal places', () => {
-    expect(RecordRetailSaleSchema.safeParse({ ...ids, paymentMethod: 'cash', lines: [{ productId: ids.productId, quantity: 0.125 }] }).success).toBe(true);
+  it('accepts fractional-weight items and a split payment using valid cashier methods', () => {
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, discountPercent: 0, tenders: [
+      { method: 'cash', amount: 50 }, { method: 'uber', amount: 50 },
+    ] }).success).toBe(true);
   });
 
   it('rejects checkout quantities that database stock precision would round', () => {
-    expect(RecordRetailSaleSchema.safeParse({ ...ids, paymentMethod: 'cash', lines: [{ productId: ids.productId, quantity: 0.0001 }] }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, lines: [{ productId: '30000000-0000-4000-8000-000000000003', quantity: 0.0001 }] }).success).toBe(false);
   });
 
   it('rejects an empty basket and unsupported payment method', () => {
-    expect(RecordRetailSaleSchema.safeParse({ ...ids, paymentMethod: 'cash', lines: [] }).success).toBe(false);
-    expect(RecordRetailSaleSchema.safeParse({ ...ids, paymentMethod: 'gift_card', lines: [{ productId: ids.productId, quantity: 1 }] }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, lines: [] }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, tenders: [{ method: 'gift_card', amount: 100 }] }).success).toBe(false);
   });
 
-  it('accepts an optional tenant-validated POS customer association', () => {
-    const sale = { ...ids, paymentMethod: 'cash', lines: [{ productId: ids.productId, quantity: 1 }] };
-    expect(RecordRetailSaleSchema.safeParse({ ...sale, customerId: '50000000-0000-4000-8000-000000000005' }).success).toBe(true);
-    expect(RecordRetailSaleSchema.safeParse({ ...sale, customerId: 'not-a-uuid' }).success).toBe(false);
-    expect(RecordRetailSaleSchema.safeParse(sale).success).toBe(true);
+  it('requires a valid customer and limits cashier discounts to 20 percent', () => {
+    expect(CompleteRetailCheckoutSchema.safeParse(ids).success).toBe(true);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, customer: null }).success).toBe(true);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, discountPercent: 20.01 }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, discountPercent: 20.001 }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, customer: { name: '', phone: '12345' } }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, customer: { name: 'Alice', phone: '077 123 4567' } }).success).toBe(true);
   });
 
-  it('validates customer search and name-only customer records', () => {
+  it('rejects duplicate tender methods, zero amounts and too many decimal places', () => {
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, tenders: [
+      { method: 'cash', amount: 50 }, { method: 'cash', amount: 50 },
+    ] }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, tenders: [{ method: 'card', amount: 0 }] }).success).toBe(false);
+    expect(CompleteRetailCheckoutSchema.safeParse({ ...ids, tenders: [{ method: 'card', amount: 10.001 }] }).success).toBe(false);
+  });
+
+  it('accepts unset or precise provider rates and rejects percentages outside the range', () => {
+    expect(UpdateRetailCommissionRatesSchema.safeParse({ organizationId: ids.organizationId, uberCommissionRate: '', pickmeCommissionRate: '' }).success).toBe(true);
+    expect(UpdateRetailCommissionRatesSchema.safeParse({ organizationId: ids.organizationId, uberCommissionRate: '10', pickmeCommissionRate: '12.5' }).success).toBe(true);
+    expect(UpdateRetailCommissionRatesSchema.safeParse({ organizationId: ids.organizationId, uberCommissionRate: '100.01', pickmeCommissionRate: '12.5' }).success).toBe(false);
+    expect(UpdateRetailCommissionRatesSchema.safeParse({ organizationId: ids.organizationId, uberCommissionRate: '10.123', pickmeCommissionRate: '12.5' }).success).toBe(false);
+  });
+
+  it('validates customer search and customer records with a phone number', () => {
     expect(SearchRetailCustomersSchema.safeParse({ organizationId: ids.organizationId, query: 'Alice', limit: 100 }).success).toBe(true);
     expect(SearchRetailCustomersSchema.safeParse({ organizationId: ids.organizationId, query: 'x'.repeat(161) }).success).toBe(false);
-    expect(UpsertRetailCustomerSchema.safeParse({ organizationId: ids.organizationId, name: 'Alice' }).success).toBe(true);
-    expect(UpsertRetailCustomerSchema.safeParse({ organizationId: ids.organizationId, name: '  ' }).success).toBe(false);
-    expect(UpsertRetailCustomerSchema.safeParse({ organizationId: ids.organizationId, name: 'Alice', email: 'alice@example.com' }).success).toBe(false);
+    expect(UpsertRetailCustomerSchema.safeParse({ organizationId: ids.organizationId, name: 'Alice', phone: '077 123 4567' }).success).toBe(true);
+    expect(UpsertRetailCustomerSchema.safeParse({ organizationId: ids.organizationId, name: '  ', phone: '0771234567' }).success).toBe(false);
+    expect(UpsertRetailCustomerSchema.safeParse({ organizationId: ids.organizationId, name: 'Alice', phone: '0771234567', email: 'alice@example.com' }).success).toBe(false);
   });
 
   it('requires a non-zero stock adjustment with a reason', () => {
-    expect(AdjustInventorySchema.safeParse({ ...ids, quantityDelta: 2, reason: 'Physical count' }).success).toBe(true);
-    expect(AdjustInventorySchema.safeParse({ ...ids, quantityDelta: 0, reason: 'Count' }).success).toBe(false);
-    expect(AdjustInventorySchema.safeParse({ ...ids, quantityDelta: 0.0001, reason: 'Count' }).success).toBe(false);
+    const adjustment = { organizationId: ids.organizationId, branchId: ids.branchId, productId: '30000000-0000-4000-8000-000000000003' };
+    expect(AdjustInventorySchema.safeParse({ ...adjustment, quantityDelta: 2, reason: 'Physical count' }).success).toBe(true);
+    expect(AdjustInventorySchema.safeParse({ ...adjustment, quantityDelta: 0, reason: 'Count' }).success).toBe(false);
+    expect(AdjustInventorySchema.safeParse({ ...adjustment, quantityDelta: 0.0001, reason: 'Count' }).success).toBe(false);
   });
 });

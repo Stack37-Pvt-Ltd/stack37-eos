@@ -28,9 +28,11 @@ describe('Retail module sections', () => {
     const html = renderToStaticMarkup(<RetailModulePanel section="customers" organizationSlug="uk-super" organizationId="10000000-0000-4000-8000-000000000001" canReadCustomers canManageCustomers />);
 
     expect(html).toContain('Search customers');
-    expect(html).toContain('Customer name');
+    expect(html).toContain('Phone');
+    expect(html).toContain('Search by name or phone');
+    expect(html).not.toContain('Enter a customer name');
     expect(html).toContain('Preview changes are read-only');
-    expect(html).toContain('Customer names are linked to completed receipts');
+    expect(html).toContain('Names and phone numbers are linked to completed receipts');
   });
 
   it('connects assigned branches to the selected branch workspace', () => {

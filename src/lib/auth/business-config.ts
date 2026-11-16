@@ -30,6 +30,8 @@ export interface BusinessConfigurationData {
     city: string | null;
     stateProvince: string | null;
     postalCode: string | null;
+    uberCommissionRate: number | null;
+    pickmeCommissionRate: number | null;
     createdAt: string;
   };
   headquartersBranch: {
@@ -93,7 +95,8 @@ export async function getBusinessConfiguration(
       id, name, slug, category_id, country_code, created_at,
       legal_name, registration_number, tax_id, tax_status, currency, timezone,
       contact_email, contact_phone, website,
-      address_line1, address_line2, city, state_province, postal_code
+      address_line1, address_line2, city, state_province, postal_code,
+      uber_commission_rate, pickme_commission_rate
     `)
     .eq('id', organizationId)
     .maybeSingle();
@@ -256,6 +259,8 @@ export async function getBusinessConfiguration(
       city: (orgRow.city as string) || null,
       stateProvince: (orgRow.state_province as string) || null,
       postalCode: (orgRow.postal_code as string) || null,
+      uberCommissionRate: orgRow.uber_commission_rate == null ? null : Number(orgRow.uber_commission_rate),
+      pickmeCommissionRate: orgRow.pickme_commission_rate == null ? null : Number(orgRow.pickme_commission_rate),
       createdAt: (orgRow.created_at as string) || new Date().toISOString(),
     },
     headquartersBranch: branchRow

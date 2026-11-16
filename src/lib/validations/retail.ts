@@ -1,17 +1,37 @@
 import { z } from 'zod';
+import { MAX_CASHIER_DISCOUNT_PERCENT, normalizeCustomerPhone } from '../retail/checkout';
 
-export const RecordRetailSaleSchema = z.object({
+const RetailPhoneSchema = z.string().trim().transform(normalizeCustomerPhone)
+  .refine((value) => /^\+?\d{7,15}$/.test(value), 'Enter a valid phone number with 7 to 15 digits.');
+
+export const CompleteRetailCheckoutSchema = z.object({
   organizationId: z.string().uuid(),
   branchId: z.string().uuid(),
-  customerId: z.string().uuid().nullable().optional(),
   idempotencyKey: z.string().uuid(),
-  paymentMethod: z.enum(['cash', 'external_card']),
+  discountPercent: z.number().finite().min(0).max(MAX_CASHIER_DISCOUNT_PERCENT)
+    .refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-8, 'Use no more than 2 decimal places.'),
+  customer: z.object({
+    name: z.string().trim().min(1).max(160),
+    phone: RetailPhoneSchema,
+  }).strict().nullable().optional(),
+  tenders: z.array(z.object({
+    method: z.enum(['cash', 'card', 'uber', 'pickme']),
+    amount: z.number().finite().positive().max(100000000)
+      .refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-8, 'Tender amounts must use no more than 2 decimal places.'),
+  }).strict()).min(1).max(4).superRefine((tenders, context) => {
+    const methods = tenders.map(({ method }) => method);
+    if (new Set(methods).size !== methods.length) {
+      context.addIssue({ code: 'custom', message: 'Use each payment method once.', path: [] });
+    }
+  }),
   lines: z.array(z.object({
     productId: z.string().uuid(),
     quantity: z.number().finite().positive().max(100000).refine((value) => Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-8, 'Use no more than 3 decimal places.'),
   })).min(1).max(100),
-});
-export type RecordRetailSaleInput = z.infer<typeof RecordRetailSaleSchema>;
+}).strict();
+export const RecordRetailSaleSchema = CompleteRetailCheckoutSchema;
+export type CompleteRetailCheckoutInput = z.infer<typeof CompleteRetailCheckoutSchema>;
+export type RecordRetailSaleInput = CompleteRetailCheckoutInput;
 
 export const SearchRetailCustomersSchema = z.object({
   organizationId: z.string().uuid(),
@@ -24,8 +44,21 @@ export const UpsertRetailCustomerSchema = z.object({
   organizationId: z.string().uuid(),
   customerId: z.string().uuid().nullable().optional(),
   name: z.string().trim().min(1).max(160),
+  phone: RetailPhoneSchema,
 }).strict();
 export type UpsertRetailCustomerInput = z.infer<typeof UpsertRetailCustomerSchema>;
+
+const commissionRate = z.string().trim()
+  .transform((value) => value === '' ? null : Number(value))
+  .refine((value) => value === null || (Number.isFinite(value) && value >= 0 && value <= 100 && Math.abs(value * 100 - Math.round(value * 100)) < 1e-8),
+    'Enter a percentage from 0 to 100, with up to 2 decimal places.');
+
+export const UpdateRetailCommissionRatesSchema = z.object({
+  organizationId: z.string().uuid(),
+  uberCommissionRate: commissionRate,
+  pickmeCommissionRate: commissionRate,
+}).strict();
+export type UpdateRetailCommissionRatesInput = z.input<typeof UpdateRetailCommissionRatesSchema>;
 
 export const AdjustInventorySchema = z.object({
   organizationId: z.string().uuid(),

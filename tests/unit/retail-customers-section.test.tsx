@@ -4,14 +4,15 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { RetailCustomersSection } from '../../src/components/tenant/retail-customers-section';
 
 describe('Retail customers section', () => {
-  it('shows a searchable name-only directory and add/edit controls to managers', () => {
+  it('shows a searchable name and phone directory with add/edit controls to managers', () => {
     const html = renderToStaticMarkup(<RetailCustomersSection organizationId="10000000-0000-4000-8000-000000000001" canRead canManage writesEnabled />);
     expect(html).toContain('Search customers');
-    expect(html).toContain('Search by customer name');
+    expect(html).toContain('Search by name or phone');
     expect(html).toContain('Add customer</button>');
-    expect(html).toContain('Customer name');
+    expect(html).toContain('Enter a customer name');
     expect(html).not.toContain('Email');
-    expect(html).not.toContain('Phone');
+    expect(html).toContain('Phone number');
+    expect(html).toContain('Latest visible purchase');
   });
 
   it('keeps preview customer records read-only while allowing search', () => {
