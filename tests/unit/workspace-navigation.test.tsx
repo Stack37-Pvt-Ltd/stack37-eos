@@ -14,6 +14,8 @@ describe('WorkspaceNavigation category tabs', () => {
 
     expect(html).toContain('href="/w/uk-super/retail"');
     expect(html).toContain('Retail &amp; E-Commerce');
+    expect(html).toContain('href="/w/uk-super/settings/team"');
+    expect(html).toContain('>Team</a>');
     expect(html).toMatch(/aria-current="page" href="\/w\/uk-super\/retail"/);
     expect(html).not.toMatch(/href="\/w\/uk-super" aria-current="page"/);
   });

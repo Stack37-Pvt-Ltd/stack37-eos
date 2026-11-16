@@ -7,7 +7,6 @@ import {
   Store,
   Tag,
   Truck,
-  UserRound,
   Users,
   Wallet,
   type LucideIcon,
@@ -18,7 +17,6 @@ import { Button } from '../ui/button';
 export const retailModuleSections = [
   { id: 'purchasing', label: 'Purchasing', icon: Truck },
   { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'employees', label: 'Employees', icon: UserRound },
   { id: 'expenses', label: 'Expenses', icon: Wallet },
   { id: 'branches', label: 'Branches', icon: Store },
   { id: 'promotions', label: 'Loyalty & offers', icon: Tag },
@@ -51,12 +49,6 @@ const moduleDefinitions: Record<RetailModuleSection, ModuleDefinition> = {
     action: 'Add customer', search: 'Search customer name or phone',
     metrics: ['Customers', 'Recent customers', 'Purchase history'], columns: ['Customer', 'Contact', 'Last purchase', 'Status'],
     detail: 'Customer profiles and purchase history will appear when customer management is connected.',
-  },
-  employees: {
-    title: 'Employees', description: 'Review team members, roles and operating locations.',
-    action: 'Add employee', search: 'Search team members',
-    metrics: ['Team members', 'Cashiers', 'Locations'], columns: ['Employee', 'Role', 'Location', 'Status'],
-    detail: 'Staff profiles and assignments are managed in Team.',
   },
   expenses: {
     title: 'Expenses & petty cash', description: 'Track operating expenses and cash payouts.',
@@ -109,24 +101,64 @@ export function RetailModuleTabs({ selected, onSelect }: {
   </>;
 }
 
-export function RetailModulePanel({ section, organizationSlug }: {
+type RetailBranch = { id: string; name: string };
+type RetailProduct = { id: string; name: string; sku: string; barcode: string | null; selling_price: number; quantity: number };
+type RetailDashboard = { salesToday: number; grossSalesToday: number; itemsSoldToday: number; activeProducts: number; lowStockProducts: number; pendingDraftReviews: number; currency: string };
+
+export function RetailModulePanel({ section, organizationSlug, branches = [], branchId, products = [], dashboard }: {
   section: RetailModuleSection;
   organizationSlug: string;
+  branches?: RetailBranch[];
+  branchId?: string | null;
+  products?: RetailProduct[];
+  dashboard?: RetailDashboard | null;
 }) {
   const definition = moduleDefinitions[section];
   const statusId = `retail-module-status-${section}`;
 
-  if (section === 'employees') {
+  if (section === 'branches') {
     return <section aria-labelledby="retail-module-title" className="min-w-0 space-y-5">
       <div>
         <p className="eyebrow mb-2">Retail &amp; E-Commerce operations</p>
-        <h2 id="retail-module-title" className="text-2xl font-semibold tracking-tight text-brand-navy">{definition.title}</h2>
-        <p className="mt-2 text-sm text-slate-600">{definition.description}</p>
+        <h2 id="retail-module-title" className="text-2xl font-semibold tracking-tight text-brand-navy">Assigned branches</h2>
+        <p className="mt-2 text-sm text-slate-600">Locations available to your account. Select a branch to open its POS, stock and sales dashboard.</p>
       </div>
-      <Alert variant="info" title="Employee management is in Team">
-        View the employee roster, roles and branch assignments in Team. Changes are disabled in this Preview to protect shared live records.
-      </Alert>
-      <Button asChild variant="outline"><Link href={`/w/${encodeURIComponent(organizationSlug)}/settings/team`}>Open Team</Link></Button>
+      {branches.length ? <div className="divide-y divide-brand-line border border-brand-line bg-white">
+        {branches.map((branch) => <div key={branch.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="font-medium text-brand-navy">{branch.name}</p><p className="mt-1 text-xs text-slate-500">{branch.id === branchId ? 'Currently selected' : 'Assigned to your account'}</p></div>
+          <Button asChild variant={branch.id === branchId ? 'outline' : 'primary'}><Link href={`/w/${encodeURIComponent(organizationSlug)}/retail?branch=${encodeURIComponent(branch.id)}`}>{branch.id === branchId ? 'Open this branch' : 'Switch to branch'}</Link></Button>
+        </div>)}
+      </div> : <Alert variant="warning" title="No assigned branches">Ask a workspace administrator to assign a branch to your account in Team.</Alert>}
+    </section>;
+  }
+
+  if (section === 'reports') {
+    const currency = dashboard?.currency || 'LKR';
+    const money = (value: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value);
+    const metrics: Array<[string, string]> = [
+      ['Gross sales today', dashboard ? money(dashboard.grossSalesToday) : 'Unavailable'],
+      ['Completed sales today', dashboard ? String(dashboard.salesToday) : 'Unavailable'],
+      ['Units sold today', dashboard ? String(dashboard.itemsSoldToday) : 'Unavailable'],
+      ['Active products', dashboard ? String(dashboard.activeProducts) : 'Unavailable'],
+      ['Low-stock products', dashboard ? String(dashboard.lowStockProducts) : 'Unavailable'],
+      ['Pending product reviews', dashboard ? String(dashboard.pendingDraftReviews) : 'Unavailable'],
+    ];
+    const branchQuery = branchId ? `?branch=${encodeURIComponent(branchId)}` : '';
+    return <section aria-labelledby="retail-module-title" className="min-w-0 space-y-5">
+      <div><p className="eyebrow mb-2">Retail &amp; E-Commerce operations</p><h2 id="retail-module-title" className="text-2xl font-semibold tracking-tight text-brand-navy">Branch report</h2><p className="mt-2 text-sm text-slate-600">Live totals for the selected branch, using recorded sales and current inventory.</p></div>
+      {dashboard ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{metrics.map(([label, value]) => <div key={label} className="min-w-0 border border-brand-line bg-white p-4"><p className="text-sm text-slate-600">{label}</p><p className="mt-4 break-words text-xl font-semibold text-brand-navy">{value}</p></div>)}</div> : <Alert variant="warning" title="Report data unavailable">Select an assigned branch and confirm retail data has loaded. No sample figures are shown.</Alert>}
+      <div className="border border-brand-line bg-white p-4"><h3 className="font-medium text-brand-navy">Current stock snapshot</h3><p className="mt-1 text-sm text-slate-600">{dashboard ? `${products.length} active catalogue products are loaded for this branch.` : 'Stock totals are unavailable until branch data loads.'}</p><Button asChild className="mt-4" variant="outline"><Link href={`/w/${encodeURIComponent(organizationSlug)}/retail${branchQuery}`}>Open inventory</Link></Button></div>
+    </section>;
+  }
+
+  if (section === 'controls') {
+    return <section aria-labelledby="retail-module-title" className="min-w-0 space-y-5">
+      <div><p className="eyebrow mb-2">Retail &amp; E-Commerce operations</p><h2 id="retail-module-title" className="text-2xl font-semibold tracking-tight text-brand-navy">Business controls</h2><p className="mt-2 text-sm text-slate-600">Manage access using the existing workspace settings and Team screens.</p></div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="border border-brand-line bg-white p-4"><h3 className="font-medium text-brand-navy">Team access</h3><p className="mt-2 text-sm text-slate-600">Review member roles, invitations and branch assignments.</p><Button asChild className="mt-4" variant="outline"><Link href={`/w/${encodeURIComponent(organizationSlug)}/settings/team`}>Open Team</Link></Button></div>
+        <div className="border border-brand-line bg-white p-4"><h3 className="font-medium text-brand-navy">Business settings</h3><p className="mt-2 text-sm text-slate-600">Review the workspace business configuration.</p><Button asChild className="mt-4" variant="outline"><Link href={`/w/${encodeURIComponent(organizationSlug)}/settings`}>Open settings</Link></Button></div>
+      </div>
+      <Alert variant="info" title="Till and audit controls are not available">Till reconciliation and a Retail audit activity screen are not part of the current data/actions. No control status is inferred.</Alert>
     </section>;
   }
 
