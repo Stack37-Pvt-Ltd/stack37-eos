@@ -6,7 +6,7 @@ import { Alert } from '../ui/alert';
 import { Button } from '../ui/button';
 import { ProductDraftReview } from './product-draft-review';
 import { isRetailModuleSection, RetailModulePanel, RetailModuleTabs, type RetailModuleSection } from './retail-module-sections';
-import { adjustInventoryAction, recordRetailSaleAction } from '../../lib/actions/retail';
+import { adjustInventoryAction, recordRetailSaleAction, searchRetailCustomersAction } from '../../lib/actions/retail';
 
 type Branch = { id: string; name: string };
 type Product = { id: string; name: string; sku: string; barcode: string | null; selling_price: number; quantity: number };
@@ -20,15 +20,18 @@ const coreRetailSections = [
   { id: 'drafts', label: 'Product drafts' },
 ] as const;
 
-export function RetailLiveWorkspace({ organizationId, organizationSlug, organizationName, branchId, branches, products, dashboard, inventoryPermission, salesPermission, loadError }: {
+export function RetailLiveWorkspace({ organizationId, organizationSlug, organizationName, branchId, branches, products, dashboard, inventoryPermission, salesPermission, customerReadPermission, customerManagePermission, customerWritesEnabled, loadError }: {
   organizationId: string; organizationSlug: string; organizationName: string; branchId: string | null; branches: Branch[];
   products: Product[]; dashboard: Dashboard | null; inventoryPermission: boolean; salesPermission: boolean; loadError?: string;
+  customerReadPermission: boolean; customerManagePermission: boolean; customerWritesEnabled: boolean;
 }) {
   const router = useRouter();
   const [view, setView] = React.useState<RetailView>('overview');
   const [search, setSearch] = React.useState('');
   const [basket, setBasket] = React.useState<Record<string, number>>({});
   const [payment, setPayment] = React.useState<'cash' | 'external_card'>('cash');
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState('');
+  const [customerOptions, setCustomerOptions] = React.useState<Array<{ id: string; name: string }>>([]);
   const [busy, setBusy] = React.useState(false);
   const [notice, setNotice] = React.useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const [adjustTarget, setAdjustTarget] = React.useState<Product | null>(null);
@@ -40,13 +43,22 @@ export function RetailLiveWorkspace({ organizationId, organizationSlug, organiza
   const total = lines.reduce((sum, line) => sum + Number(line.product.selling_price) * line.quantity, 0);
   const filtered = products.filter((product) => `${product.name} ${product.sku} ${product.barcode || ''}`.toLowerCase().includes(search.trim().toLowerCase()));
 
+  React.useEffect(() => {
+    if (!customerReadPermission || !salesPermission) return;
+    let active = true;
+    void searchRetailCustomersAction({ organizationId, limit: 100 }).then((result) => {
+      if (active && result.success && result.data) setCustomerOptions(result.data.map(({ id, name }) => ({ id, name })));
+    });
+    return () => { active = false; };
+  }, [customerReadPermission, organizationId, salesPermission]);
+
   async function checkout() {
     if (!branchId || !lines.length || busy) return;
     setBusy(true); setNotice(null);
     try {
-      const result = await recordRetailSaleAction({ organizationId, branchId, idempotencyKey: crypto.randomUUID(), paymentMethod: payment, lines: lines.map(({ product, quantity }) => ({ productId: product.id, quantity })) });
+      const result = await recordRetailSaleAction({ organizationId, branchId, idempotencyKey: crypto.randomUUID(), paymentMethod: payment, customerId: selectedCustomerId || null, lines: lines.map(({ product, quantity }) => ({ productId: product.id, quantity })) });
       if (!result.success || !result.data) { setNotice({ kind: 'error', message: result.error || 'Checkout could not be completed.' }); return; }
-      setBasket({}); setNotice({ kind: 'success', message: `Sale recorded. Receipt ${result.data.receiptNumber} · ${formatter.format(result.data.total)}${payment === 'external_card' ? ' · Card payment was processed outside STACK37.' : ''}` });
+      setBasket({}); setSelectedCustomerId(''); setNotice({ kind: 'success', message: `Sale recorded. Receipt ${result.data.receiptNumber} · ${formatter.format(result.data.total)}${payment === 'external_card' ? ' · Card payment was processed outside STACK37.' : ''}` });
       router.refresh();
     } catch { setNotice({ kind: 'error', message: 'Checkout could not be completed. Refresh the page and try again.' }); }
     finally { setBusy(false); }
@@ -83,10 +95,10 @@ export function RetailLiveWorkspace({ organizationId, organizationSlug, organiza
     {view === 'pos' && <section className="space-y-4"><div><h2 className="text-xl font-semibold text-brand-navy">Point of sale</h2><p className="mt-1 text-sm text-slate-600">Sales use the catalogue price and reduce this branch’s stock atomically.</p></div><Alert variant="info" title="Payment handling">Cash sales are recorded here. Card selection records an externally processed payment only; STACK37 does not charge a card or contact a payment terminal. Tax is not calculated by this release.</Alert>
       {!salesPermission && <Alert variant="warning">Your role does not have checkout permission. An administrator can assign the Cashier role.</Alert>}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]"><div className="space-y-3"><input type="search" aria-label="Search products or barcode" placeholder="Search name, SKU or barcode" value={search} onChange={(event) => setSearch(event.target.value)} className="min-h-11 w-full border border-slate-300 px-3 text-sm"/><div className="max-h-[55vh] overflow-auto border border-brand-line">{filtered.map((product) => <div key={product.id} className="flex items-center justify-between gap-3 border-b border-brand-line p-3"><div className="min-w-0"><p className="truncate text-sm font-medium text-brand-navy">{product.name}</p><p className="text-xs text-slate-500">{product.sku} · {product.quantity} in stock</p></div><div className="flex items-center gap-3"><span className="text-sm">{formatter.format(Number(product.selling_price))}</span><Button size="sm" disabled={!salesPermission || product.quantity <= 0} onClick={() => setBasket((current) => ({ ...current, [product.id]: (current[product.id] || 0) + 1 }))}>Add</Button></div></div>)}{!filtered.length && <p className="p-5 text-sm text-slate-500">No matching products in this branch.</p>}</div></div>
-        <aside className="space-y-4 border border-brand-line p-4"><h3 className="font-semibold text-brand-navy">Current sale</h3>{lines.length ? lines.map(({ product, quantity }) => <div key={product.id} className="flex justify-between gap-3 text-sm"><span className="min-w-0 truncate">{product.name} × {quantity}</span><span>{formatter.format(Number(product.selling_price) * quantity)}</span></div>) : <p className="text-sm text-slate-500">Add products to start a sale.</p>}<label className="block space-y-1 text-xs font-medium text-slate-600">Payment method<select value={payment} onChange={(event) => setPayment(event.target.value as typeof payment)} className="min-h-10 w-full border border-slate-300 bg-white px-2 text-sm"><option value="cash">Cash</option><option value="external_card">Card processed externally</option></select></label><div className="flex justify-between border-t border-brand-line pt-3 font-semibold"><span>Total before tax</span><span>{formatter.format(total)}</span></div><Button className="w-full" disabled={!salesPermission || !lines.length || busy} isLoading={busy} onClick={checkout}>Record sale</Button></aside></div></section>}
+        <aside className="space-y-4 border border-brand-line p-4"><h3 className="font-semibold text-brand-navy">Current sale</h3>{lines.length ? lines.map(({ product, quantity }) => <div key={product.id} className="flex justify-between gap-3 text-sm"><span className="min-w-0 truncate">{product.name} × {quantity}</span><span>{formatter.format(Number(product.selling_price) * quantity)}</span></div>) : <p className="text-sm text-slate-500">Add products to start a sale.</p>}{customerReadPermission && <label className="block space-y-1 text-xs font-medium text-slate-600">Customer (optional)<select aria-label="Customer (optional)" value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)} className="min-h-10 w-full border border-slate-300 bg-white px-2 text-sm"><option value="">No customer</option>{customerOptions.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>}<label className="block space-y-1 text-xs font-medium text-slate-600">Payment method<select value={payment} onChange={(event) => setPayment(event.target.value as typeof payment)} className="min-h-10 w-full border border-slate-300 bg-white px-2 text-sm"><option value="cash">Cash</option><option value="external_card">Card processed externally</option></select></label><div className="flex justify-between border-t border-brand-line pt-3 font-semibold"><span>Total before tax</span><span>{formatter.format(total)}</span></div><Button className="w-full" disabled={!salesPermission || !lines.length || busy} isLoading={busy} onClick={checkout}>Record sale</Button></aside></div></section>}
     {view === 'inventory' && <section className="space-y-4"><div><h2 className="text-xl font-semibold text-brand-navy">Branch inventory</h2><p className="mt-1 text-sm text-slate-600">Stock quantities are branch specific. New imported products start at zero until counted.</p></div>{!inventoryPermission && <Alert variant="warning">Your role can view stock but cannot change it. An administrator can grant inventory access.</Alert>}<div className="overflow-x-auto border border-brand-line"><table className="w-full min-w-[560px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-4 py-3">Product</th><th className="px-4 py-3">SKU</th><th className="px-4 py-3">On hand</th><th className="px-4 py-3">Price</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{products.map((product) => <tr key={product.id} className="border-t border-brand-line"><td className="px-4 py-3">{product.name}</td><td className="px-4 py-3">{product.sku}</td><td className="px-4 py-3">{product.quantity}</td><td className="px-4 py-3">{formatter.format(Number(product.selling_price))}</td><td className="px-4 py-3"><Button variant="outline" size="sm" disabled={!inventoryPermission} onClick={() => { setAdjustTarget(product); setAdjustment(''); setReason(''); }}>Adjust stock</Button></td></tr>)}</tbody></table>{!products.length && <p className="p-5 text-sm text-slate-500">No active products are available.</p>}</div></section>}
     {view === 'drafts' && <ProductDraftReview organizationId={organizationId} organizationName={organizationName} />}
-    {isRetailModuleSection(view) ? <RetailModulePanel section={view} organizationSlug={organizationSlug} branches={branches} branchId={branchId} products={products} dashboard={dashboard} /> : null}
+    {isRetailModuleSection(view) ? <RetailModulePanel section={view} organizationSlug={organizationSlug} organizationId={organizationId} branches={branches} branchId={branchId} products={products} dashboard={dashboard} canReadCustomers={customerReadPermission} canManageCustomers={customerManagePermission} customerWritesEnabled={customerWritesEnabled} /> : null}
     {adjustTarget && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/45 p-4"><section role="dialog" aria-modal="true" aria-labelledby="stock-adjust-title" className="w-full max-w-md space-y-4 border border-slate-300 bg-white p-5"><h2 id="stock-adjust-title" className="text-xl font-semibold text-brand-navy">Adjust stock</h2><p className="text-sm text-slate-600">{adjustTarget.name} · current balance {adjustTarget.quantity}</p><form className="space-y-4" onSubmit={saveAdjustment}><label className="block space-y-1 text-sm">Quantity change<input required type="number" step="0.001" value={adjustment} onChange={(event) => setAdjustment(event.target.value)} className="min-h-11 w-full border border-slate-300 px-3" placeholder="Use a negative number to reduce stock"/></label><label className="block space-y-1 text-sm">Reason<input required minLength={3} maxLength={300} value={reason} onChange={(event) => setReason(event.target.value)} className="min-h-11 w-full border border-slate-300 px-3"/></label><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setAdjustTarget(null)}>Cancel</Button><Button type="submit" isLoading={busy}>Save adjustment</Button></div></form></section></div>}
   </div>;
 }

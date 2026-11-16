@@ -2,7 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '../supabase/server';
-import { AdjustInventorySchema, RecordRetailSaleSchema } from '../validations/retail';
+import {
+  AdjustInventorySchema,
+  RecordRetailSaleSchema,
+  SearchRetailCustomersSchema,
+  UpsertRetailCustomerSchema,
+} from '../validations/retail';
 
 export interface RetailActionResult<T = Record<string, unknown>> {
   success: boolean;
@@ -11,10 +16,13 @@ export interface RetailActionResult<T = Record<string, unknown>> {
   fieldErrors?: Record<string, string[]>;
 }
 
-function previewMutationBlocked(): RetailActionResult | null {
-  return process.env.VERCEL_ENV === 'preview'
-    ? { success: false, error: 'Retail changes are disabled in Preview to protect shared live business data.' }
-    : null;
+function previewMutationBlocked(scope: 'customer' | 'sale' | 'inventory' = 'inventory'): RetailActionResult | null {
+  if (process.env.VERCEL_ENV !== 'preview') return null;
+  // The CEO approved live Preview customer and POS writes for TASK-UK-SUPER-005A.
+  // Stock adjustments remain blocked; POS sales continue to decrement stock atomically.
+  return scope === 'customer' || scope === 'sale'
+    ? null
+    : { success: false, error: 'Inventory adjustments are disabled in Preview to protect shared live stock.' };
 }
 
 async function verifyActiveMember(organizationId: string) {
@@ -41,31 +49,103 @@ export async function recordRetailSaleAction(rawInput: unknown): Promise<RetailA
   taxTotal: number;
   total: number;
   paymentMethod: 'cash' | 'external_card';
+  customerId: string | null;
   createdAt: string;
   replayed: boolean;
 }>> {
-  const previewBlock = previewMutationBlocked();
+  const previewBlock = previewMutationBlocked('sale');
   if (previewBlock) return { success: false, error: previewBlock.error };
   const parsed = RecordRetailSaleSchema.safeParse(rawInput);
   if (!parsed.success) return { success: false, error: 'Check the basket and payment details.', fieldErrors: parsed.error.flatten().fieldErrors };
-  const { organizationId, branchId, idempotencyKey, paymentMethod, lines } = parsed.data;
+  const { organizationId, branchId, idempotencyKey, paymentMethod, customerId, lines } = parsed.data;
   const { supabase, error: accessError } = await verifyActiveMember(organizationId);
   if (accessError) return { success: false, error: accessError };
 
-  const { data, error } = await supabase.rpc('record_retail_sale', {
+  const { data, error } = await supabase.rpc('record_retail_sale_with_customer', {
     p_organization_id: organizationId,
     p_branch_id: branchId,
     p_idempotency_key: idempotencyKey,
     p_payment_method: paymentMethod,
+    p_customer_id: customerId || null,
     p_lines: lines.map(({ productId, quantity }) => ({ product_id: productId, quantity })),
   });
-  if (error || !data) return { success: false, error: error?.message || 'The sale could not be completed.' };
+  if (error || !data) return { success: false, error: 'The sale could not be completed. Check customer access and stock, then try again.' };
 
   await revalidateRetailPaths(supabase, organizationId);
   return { success: true, data: data as RetailActionResult['data'] & {
     saleId: string; receiptNumber: string; itemCount: number; subtotal: number; taxTotal: number;
-    total: number; paymentMethod: 'cash' | 'external_card'; createdAt: string; replayed: boolean;
+    total: number; paymentMethod: 'cash' | 'external_card'; customerId: string | null; createdAt: string; replayed: boolean;
   } };
+}
+
+export type RetailCustomer = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  lastPurchaseAt: string | null;
+};
+
+export async function searchRetailCustomersAction(rawInput: unknown): Promise<RetailActionResult<RetailCustomer[]>> {
+  const parsed = SearchRetailCustomersSchema.safeParse(rawInput);
+  if (!parsed.success) return { success: false, error: 'Check the customer search.', fieldErrors: parsed.error.flatten().fieldErrors };
+  const { organizationId, query, limit } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  let request = supabase.from('customers')
+    .select('id, name, created_at, updated_at')
+    .eq('organization_id', organizationId)
+    .order('name', { ascending: true })
+    .limit(limit);
+  if (query) {
+    const escaped = query.replace(/[\\%_]/g, '\\$&');
+    request = request.ilike('name', `%${escaped}%`);
+  }
+  const { data, error } = await request;
+  if (error) return { success: false, error: 'Customer records could not be loaded.' };
+
+  const customers = (data || []).map((customer) => ({
+    id: customer.id,
+    name: customer.name,
+    createdAt: customer.created_at,
+    updatedAt: customer.updated_at,
+    lastPurchaseAt: null as string | null,
+  }));
+  if (customers.length) {
+    const { data: sales } = await supabase.from('retail_sales')
+      .select('customer_id, created_at')
+      .eq('organization_id', organizationId)
+      .in('customer_id', customers.map((customer) => customer.id))
+      .order('created_at', { ascending: false })
+      .limit(1000);
+    const lastPurchase = new Map<string, string>();
+    for (const sale of sales || []) {
+      if (sale.customer_id && !lastPurchase.has(sale.customer_id)) lastPurchase.set(sale.customer_id, sale.created_at);
+    }
+    for (const customer of customers) customer.lastPurchaseAt = lastPurchase.get(customer.id) || null;
+  }
+  return { success: true, data: customers };
+}
+
+export async function upsertRetailCustomerAction(rawInput: unknown): Promise<RetailActionResult<RetailCustomer>> {
+  const previewBlock = previewMutationBlocked('customer');
+  if (previewBlock) return { success: false, error: previewBlock.error };
+  const parsed = UpsertRetailCustomerSchema.safeParse(rawInput);
+  if (!parsed.success) return { success: false, error: 'Check the customer name.', fieldErrors: parsed.error.flatten().fieldErrors };
+  const { organizationId, customerId, name } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  const { data, error } = await supabase.rpc('upsert_retail_customer', {
+    p_organization_id: organizationId,
+    p_customer_id: customerId || null,
+    p_name: name,
+  });
+  if (error || !data) return { success: false, error: 'The customer could not be saved. Check your customer permissions and try again.' };
+  await revalidateRetailPaths(supabase, organizationId);
+  const saved = data as { id: string; name: string; createdAt: string; updatedAt: string };
+  return { success: true, data: { ...saved, lastPurchaseAt: null } };
 }
 
 export async function adjustInventoryAction(rawInput: unknown): Promise<RetailActionResult<{ quantity: number }>> {

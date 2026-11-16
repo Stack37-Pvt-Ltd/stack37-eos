@@ -11,6 +11,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 **Authority:** Chief Executive Officer, STACK37 (Pvt) Ltd  
 **Status:** CEO-Approved Permanent Operating Policy  
 
+### CEO-directed operating amendment — 2026-11-16
+
+The CEO has reassigned engineering execution to ChatGPT Codex end to end. This amendment supersedes the role split and task-ownership references below for current and future work: Codex owns product implementation across frontend, backend, database schema and migrations, authorization, business rules, integrations, and tests. Google Antigravity is not an assigned owner or required handoff. Work proceeds one feature at a time, with each feature claimed, implemented, verified, recorded, and handed off before the next feature begins. The CEO retains final authority over product scope and business policy, UI/UX approvals where required, Git synchronization, live database operations, and Production deployment. Existing explicit authorization and safety gates remain in force; this amendment does not authorize a commit, push, live migration, or Production deployment by itself.
+
 ---
 
 ## 1. Permanent Division of Responsibilities
@@ -50,8 +54,8 @@ The CEO has established the following strict division of engineering and product
 ```
 
 ### Boundary & Collaboration Invariants:
-1. **Codex Boundary:** Codex must **NOT** independently change backend business logic, database schemas, RLS policies, security definer RPCs, or server action logic.
-2. **Antigravity Boundary:** Antigravity must **NOT** redesign approved UI components, change visual styling standards, or alter visual design tokens without coordination.
+1. **Codex Ownership:** Under the CEO-directed amendment above, Codex may implement approved end-to-end feature work. Significant product policy decisions and the CEO authorization gates below remain reserved to the CEO.
+2. **Design Standards:** Codex must preserve approved UI components, visual styling standards, and design tokens unless the CEO approves a change.
 3. **Integration Contract Requirement:** Before implementing dependent work, both agents must document integration requirements (input schemas, validation models, return types, error contracts) in the active task record.
 4. **Preservation of Uncommitted Changes:** Agents must **NEVER** overwrite, discard, or reset (`git reset`, `git checkout .`) another agent's uncommitted work.
 5. **Technical Isolation for Parallel Work:** A task-register entry alone is not a technical lock. When parallel work is necessary, agents must operate on **separate Git branches or worktrees** and follow an approved integration procedure.
@@ -91,11 +95,11 @@ Before touching any code or executing any command, every agent MUST execute thes
 4. **Read relevant product requirements and decisions:** Inspect [docs/PRODUCT_SCOPE.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/PRODUCT_SCOPE.md), [docs/FEATURES.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/FEATURES.md), and [docs/DECISIONS.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/DECISIONS.md).
 5. **Read applicable design standards:** Inspect [docs/DESIGN_STANDARDS.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/DESIGN_STANDARDS.md) (official logo, navy typography, blue/violet theme).
 6. **Inspect the current Git status and existing changes:** Run `git status` to verify working tree state and preserve uncommitted changes.
-7. **Confirm task authorization & domain ownership:** Verify status is `AUTHORIZED` and matches the agent's domain (Antigravity: Backend; Codex: Frontend/UI).
+7. **Confirm task authorization & ownership:** Verify the parent task is CEO-authorized, the feature is next in sequence, and Codex is the recorded owner under the CEO-directed amendment.
 8. **Claim task & declare file scope:** Transition task to `IN_PROGRESS` in [docs/TASKS.md](file:///c:/Users/nimth/Desktop/Developments/stack37-eos/docs/TASKS.md) with declared file locks before beginning work. Only then begin authorized work.
 
 ### Step 3: Implement Within Domain
-- Stay strictly within the assigned functional domain (Antigravity: Backend; Codex: Frontend/UI).
+- Stay within the claimed feature scope; Codex may implement the full stack under the CEO-directed amendment.
 - Execute test suites (`npm run test:unit`, `npm run typecheck`). Ensure 0 regressions.
 - If visual/frontend, verify responsive presentation down to 375px mobile screens.
 

@@ -46,6 +46,8 @@ export default async function RetailOperationsPage(props: {
   let loadError: string | undefined;
   let inventoryPermission = false;
   let salesPermission = false;
+  let customerReadPermission = false;
+  let customerManagePermission = false;
   try {
     const [{ data: assignments, error: branchError }, { data: member }, { data: memberRoles }] = await Promise.all([
       supabase.from('membership_branches').select('branch_id, branches(id, name)').eq('organization_id', organization.id).eq('membership_id', membership.id),
@@ -55,11 +57,13 @@ export default async function RetailOperationsPage(props: {
     if (branchError) throw branchError;
     branches = (assignments || []).flatMap((row) => normalizeBranchRelation(row.branches));
     const roleIds = (memberRoles || []).map((row) => row.role_id);
-    if (member?.is_owner) { inventoryPermission = true; salesPermission = true; }
+    if (member?.is_owner) { inventoryPermission = true; salesPermission = true; customerReadPermission = true; customerManagePermission = true; }
     else if (roleIds.length) {
       const { data: grants } = await supabase.from('role_permissions').select('permission_id').eq('organization_id', organization.id).in('role_id', roleIds);
       const permissions = new Set((grants || []).map((grant) => grant.permission_id));
       inventoryPermission = permissions.has('inventory_edit'); salesPermission = permissions.has('pos_checkout');
+      customerReadPermission = permissions.has('customers_read') || permissions.has('customers_manage');
+      customerManagePermission = permissions.has('customers_manage');
     }
     const requestedBranch = typeof searchParams.branch === 'string' ? searchParams.branch : null;
     const branchId = branches.find((branch) => branch.id === requestedBranch)?.id || branches[0]?.id || null;
@@ -80,5 +84,5 @@ export default async function RetailOperationsPage(props: {
   }
   const requestedBranch = typeof searchParams.branch === 'string' ? searchParams.branch : null;
   const branchId = branches.find((branch) => branch.id === requestedBranch)?.id || branches[0]?.id || null;
-  return <RetailLiveWorkspace organizationId={organization.id} organizationSlug={organization.slug} organizationName={organization.name} branchId={branchId} branches={branches} products={products} dashboard={dashboard} inventoryPermission={inventoryPermission} salesPermission={salesPermission} loadError={loadError} />;
+  return <RetailLiveWorkspace organizationId={organization.id} organizationSlug={organization.slug} organizationName={organization.name} branchId={branchId} branches={branches} products={products} dashboard={dashboard} inventoryPermission={inventoryPermission} salesPermission={salesPermission} customerReadPermission={customerReadPermission} customerManagePermission={customerManagePermission} customerWritesEnabled={process.env.VERCEL_ENV !== 'preview'} loadError={loadError} />;
 }

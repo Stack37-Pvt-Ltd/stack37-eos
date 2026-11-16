@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Alert } from '../ui/alert';
 import { Button } from '../ui/button';
+import { RetailCustomersSection } from './retail-customers-section';
 
 export const retailModuleSections = [
   { id: 'purchasing', label: 'Purchasing', icon: Truck },
@@ -105,16 +106,24 @@ type RetailBranch = { id: string; name: string };
 type RetailProduct = { id: string; name: string; sku: string; barcode: string | null; selling_price: number; quantity: number };
 type RetailDashboard = { salesToday: number; grossSalesToday: number; itemsSoldToday: number; activeProducts: number; lowStockProducts: number; pendingDraftReviews: number; currency: string };
 
-export function RetailModulePanel({ section, organizationSlug, branches = [], branchId, products = [], dashboard }: {
+export function RetailModulePanel({ section, organizationSlug, organizationId, branches = [], branchId, products = [], dashboard, canReadCustomers = false, canManageCustomers = false, customerWritesEnabled = false }: {
+  organizationId?: string;
   section: RetailModuleSection;
   organizationSlug: string;
   branches?: RetailBranch[];
   branchId?: string | null;
   products?: RetailProduct[];
   dashboard?: RetailDashboard | null;
+  canReadCustomers?: boolean;
+  canManageCustomers?: boolean;
+  customerWritesEnabled?: boolean;
 }) {
   const definition = moduleDefinitions[section];
   const statusId = `retail-module-status-${section}`;
+
+  if (section === 'customers') {
+    return <RetailCustomersSection organizationId={organizationId || ''} canRead={canReadCustomers} canManage={canManageCustomers} writesEnabled={customerWritesEnabled} />;
+  }
 
   if (section === 'branches') {
     return <section aria-labelledby="retail-module-title" className="min-w-0 space-y-5">

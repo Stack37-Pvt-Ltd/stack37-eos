@@ -15,13 +15,22 @@ describe('Retail module sections', () => {
   });
 
   it('keeps unconnected module actions disabled and identifies their unavailable data', () => {
-    const html = renderToStaticMarkup(<RetailModulePanel section="customers" organizationSlug="uk-super" />);
+    const html = renderToStaticMarkup(<RetailModulePanel section="purchasing" organizationSlug="uk-super" />);
 
     expect(html).toContain('Not connected yet');
-    expect(html).toContain('Customer profiles and purchase history will appear when customer management is connected.');
-    expect(html).toContain('Add customer</button>');
+    expect(html).toContain('Orders, supplier balances and receiving records will appear when purchasing is connected.');
+    expect(html).toContain('New purchase order</button>');
     expect(html).toContain('disabled=""');
     expect(html).toContain('Unavailable');
+  });
+
+  it('connects Customers to the searchable directory and shows Preview write limits', () => {
+    const html = renderToStaticMarkup(<RetailModulePanel section="customers" organizationSlug="uk-super" organizationId="10000000-0000-4000-8000-000000000001" canReadCustomers canManageCustomers />);
+
+    expect(html).toContain('Search customers');
+    expect(html).toContain('Customer name');
+    expect(html).toContain('Preview changes are read-only');
+    expect(html).toContain('Customer names are linked to completed receipts');
   });
 
   it('connects assigned branches to the selected branch workspace', () => {

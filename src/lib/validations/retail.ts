@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const RecordRetailSaleSchema = z.object({
   organizationId: z.string().uuid(),
   branchId: z.string().uuid(),
+  customerId: z.string().uuid().nullable().optional(),
   idempotencyKey: z.string().uuid(),
   paymentMethod: z.enum(['cash', 'external_card']),
   lines: z.array(z.object({
@@ -11,6 +12,20 @@ export const RecordRetailSaleSchema = z.object({
   })).min(1).max(100),
 });
 export type RecordRetailSaleInput = z.infer<typeof RecordRetailSaleSchema>;
+
+export const SearchRetailCustomersSchema = z.object({
+  organizationId: z.string().uuid(),
+  query: z.string().trim().max(160).optional().default(''),
+  limit: z.number().int().min(1).max(100).optional().default(100),
+});
+export type SearchRetailCustomersInput = z.infer<typeof SearchRetailCustomersSchema>;
+
+export const UpsertRetailCustomerSchema = z.object({
+  organizationId: z.string().uuid(),
+  customerId: z.string().uuid().nullable().optional(),
+  name: z.string().trim().min(1).max(160),
+}).strict();
+export type UpsertRetailCustomerInput = z.infer<typeof UpsertRetailCustomerSchema>;
 
 export const AdjustInventorySchema = z.object({
   organizationId: z.string().uuid(),
