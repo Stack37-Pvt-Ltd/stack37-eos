@@ -1,9 +1,9 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
-**Last updated:** October 14, 2026 (Asia/Colombo)
-**Branch:** `codex/task-stab-005-integration` (local checkpoint `132e54a`, based on `d17ed63a48e2313df0f5406d9074f9076b788721`)
-**Committed baseline:** `132e54a6bb303700eb132d6e967efbad82e3fda6` (TASK-STAB-005 integration checkpoint)
-**Current task:** `TASK-PROD-LOGIN-001` — READY_FOR_REVIEW (Backend routing correction complete & verified); `TASK-STAB-005` accepted for local-only scope with real-service release gate open.
+**Last updated:** November 16, 2026 (Asia/Colombo)
+**Branch:** `codex/task-uk-super-004-ops` (UK Super candidate; see task release plan)
+**Committed baseline:** `fccdefcc9217bfaac671eaf55694ffc55d2cda8b` (Retail data and category navigation correction)
+**Current task:** `TASK-UK-SUPER-004` — READY_FOR_REVIEW for the Preview correction; signed-in review and Production release gates remain open.
 **Evidence:** 198/198 local unit tests across 13 files, TypeScript, scoped ESLint, git diff check pass. No UK Super changes or migrations included. Zero commits, pushes, or deployments.
 
 ---
@@ -84,4 +84,4 @@ CEO reassigned this implementation to Codex. The isolated branch `codex/task-uk-
 
 Local verification: TypeScript passed; 265/265 unit tests across 17 files passed; scoped ESLint and `git diff --check` passed on the committed candidate. PGlite tests executed Migrations 15 and 16 in memory and verified invitation/acceptance, sale/stock/idempotency/dashboard/audit/role-seeding paths. Auth/permission helpers were stubs, not real Supabase RLS/JWT proof. The approved Geist faces are self-hosted with `next/font/local` and their SIL OFL license. The production build compiles and typechecks but fails during Windows generated-route output with `EPERM` while creating directories under `.next`. Docker Desktop cannot start (missing `SOFTWARE\\Docker Inc\\Docker Desktop` registry key); its per-user repair installer exited `-5`. The Supabase CLI is not installed. An isolated Supabase branch was quoted at $0.01344/hour and the CEO declined its creation.
 
-**TASK-UK-SUPER-004 reopened IN_PROGRESS on 2026-11-16.** The Retail branch relation error is fixed locally by normalizing Supabase's many-to-one object result. The missing category-specific Retail top-level tab is fixed locally by passing categoryName through the workspace frame. Verification: 270/270 unit tests, TypeScript, scoped ESLint, and diff check pass. Preview redeployment/browser validation is pending. Production remains unchanged and all prior release gates remain open. See [the release plan](docs/reviews/TASK-UK-SUPER-004/IMPLEMENTATION-AND-LIVE-RELEASE-PLAN.md).
+**TASK-UK-SUPER-004 frontend correction is READY_FOR_REVIEW (2026-11-16).** The Retail branch relation error is fixed by normalizing Supabase's many-to-one object result. The category-specific Retail & E-Commerce tab is fixed by passing categoryName through the workspace frame. Verification: 270/270 unit tests, TypeScript, scoped ESLint, and diff check pass. Preview deployment `dpl_6rm1CyvecuszVbtL76rUgDfmGxqt` for commit `fccdefc` is READY; its unauthenticated Retail route returns the sign-in page as expected. Signed-in verification is still needed. `mybusiness.stack37.com` is assigned to Production deployment `dpl_3fKc8z73hHX7WzrtGwSZB49tmzuR` (commit `0d7a2fe`), which currently returns 404 at `/w/uk-super`; Production has not been changed. Remaining production release gates are open. See [the release plan](docs/reviews/TASK-UK-SUPER-004/IMPLEMENTATION-AND-LIVE-RELEASE-PLAN.md).
