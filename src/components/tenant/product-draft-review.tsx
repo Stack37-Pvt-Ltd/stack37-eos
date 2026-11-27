@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { publishCleanDraftsAction } from '../../lib/inventory/product-staging';
 
 const PAGE_SIZE = 20;
 
@@ -162,13 +163,17 @@ function Field({
 export function ProductDraftReview({
   organizationId,
   organizationName,
+  canPublish = true,
 }: {
   organizationId: string;
   organizationName: string;
+  canPublish?: boolean;
 }) {
   const [drafts, setDrafts] = useState<ProductDraft[]>([]);
   const [summary, setSummary] = useState<DraftSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
+  const [publishStatus, setPublishStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('staged');
   const [flagFilter, setFlagFilter] = useState('all');
@@ -316,19 +321,74 @@ export function ProductDraftReview({
     setRefreshKey((current) => current + 1);
   }
 
+  async function handlePublishClean() {
+    if (publishing || !canPublish) return;
+    setPublishing(true);
+    setPublishStatus(null);
+    try {
+      const res = await publishCleanDraftsAction(organizationId);
+      if (res.success && res.data) {
+        setPublishStatus({
+          success: true,
+          message: `Successfully published ${res.data.published_count} clean product drafts into active catalog.`,
+        });
+        setRefreshKey((current) => current + 1);
+      } else {
+        setPublishStatus({
+          success: false,
+          message: res.error || 'Failed to publish clean drafts.',
+        });
+      }
+    } catch {
+      setPublishStatus({
+        success: false,
+        message: 'An unexpected error occurred while publishing drafts.',
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil(rowCount / PAGE_SIZE));
   const recordTotal = summary?.total_staged ?? 0;
   const flaggedTotal = summary?.flagged_total ?? 0;
 
   return (
     <section className="max-w-6xl space-y-6">
-      <header className="space-y-2">
-        <p className="eyebrow">Inventory · Import review</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">Review product drafts</h1>
-        <p className="max-w-3xl text-sm leading-6 text-slate-600">
-          Check the imported values for {organizationName}. Edits are saved to the draft and recorded in the audit log. This page does not publish products or create stock.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="eyebrow">Inventory · Import review</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-brand-navy">Review product drafts</h1>
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">
+            Check the imported values for {organizationName}. Edits are saved to the draft and recorded in the audit log.
+          </p>
+        </div>
+        {canPublish && (
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              disabled={publishing || loading}
+              onClick={handlePublishClean}
+              className="inline-flex min-h-11 items-center justify-center border border-brand-navy bg-brand-navy px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-50"
+            >
+              {publishing ? 'Publishing drafts...' : 'Publish Clean Drafts'}
+            </button>
+          </div>
+        )}
       </header>
+
+      {publishStatus && (
+        <div
+          role="status"
+          className={`border p-4 text-sm font-medium ${
+            publishStatus.success
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              : 'border-rose-200 bg-rose-50 text-rose-900'
+          }`}
+        >
+          {publishStatus.message}
+        </div>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="border border-slate-200 bg-white p-4">

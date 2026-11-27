@@ -6,14 +6,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # STACK37 EOS — AI Agent Responsibility Policy & Operating Governance
 
-**Audience:** Google Antigravity, ChatGPT Codex, ChatGPT (Coordination), Human Engineers  
-**Project:** STACK37 EOS / My Business by STACK37  
-**Authority:** Chief Executive Officer, STACK37 (Pvt) Ltd  
-**Status:** CEO-Approved Permanent Operating Policy  
+**Audience:** Google Antigravity, ChatGPT Codex, ChatGPT (Coordination), Human Engineers
+**Project:** STACK37 EOS / My Business by STACK37
+**Authority:** Chief Executive Officer, STACK37 (Pvt) Ltd
+**Status:** CEO-Approved Permanent Operating Policy
 
 ### CEO-directed operating amendment — 2026-11-16
 
-The CEO has reassigned engineering execution to ChatGPT Codex end to end. This amendment supersedes the role split and task-ownership references below for current and future work: Codex owns product implementation across frontend, backend, database schema and migrations, authorization, business rules, integrations, and tests. Google Antigravity is not an assigned owner or required handoff. Work proceeds one feature at a time, with each feature claimed, implemented, verified, recorded, and handed off before the next feature begins. The CEO retains final authority over product scope and business policy, UI/UX approvals where required, Git synchronization, live database operations, and Production deployment. Existing explicit authorization and safety gates remain in force; this amendment does not authorize a commit, push, live migration, or Production deployment by itself.
+The CEO has transitioned unified engineering authority to Google Antigravity end-to-end on November 22, 2026. This amendment supersedes previous agent assignments: Google Antigravity owns product implementation across frontend/UI, backend, database schema and migrations, authorization, business rules, integrations, security, and tests. ChatGPT Codex is no longer active. Work proceeds under strict verification standards, with each feature claimed, implemented, verified, recorded, and handed off before the next feature begins. The CEO retains absolute final authority over product scope and business policy, UI/UX approvals, Git synchronization, live database operations, and Production deployment. Existing explicit authorization and safety gates remain strictly in force; this amendment does not authorize a commit, push, live migration, or Production deployment by itself.
 
 ---
 

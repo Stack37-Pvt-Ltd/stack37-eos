@@ -37,6 +37,7 @@ export type TeamRoster = {
 };
 export type TeamActions = {
   invite?(input: { email: string; roleId: string; branchId: string }): Promise<{ success: boolean; error?: string; invitationId?: string; email?: string; inviteUrl?: string; emailDelivered?: boolean; emailDeliveryError?: string }>;
+  resendInvite?(input: { invitationId: string }): Promise<{ success: boolean; error?: string; inviteUrl?: string; emailDelivered?: boolean }>;
   updateMember(input: { membershipId: string; action: 'suspend' | 'reinstate' | 'remove' }): Promise<{ success: boolean; error?: string }>;
   cancelInvitation(input: { invitationId: string }): Promise<{ success: boolean; error?: string }>;
   updateAssignment?(input: { membershipId: string; roleId: string; branchId: string }): Promise<{ success: boolean; error?: string }>;
@@ -72,6 +73,7 @@ export function TeamManagement({ organizationName, roster, rosterError, actions,
   const [assignmentTarget, setAssignmentTarget] = React.useState<TeamMember | null>(null);
   const [actionKind, setActionKind] = React.useState<'suspend' | 'reinstate' | 'remove' | 'cancel'>('suspend');
   const [busy, setBusy] = React.useState(false);
+  const [resendingId, setResendingId] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState('');
   const [notice, setNotice] = React.useState<{ kind: 'success' | 'error'; message: string } | null>(null);
   const [inviteUrl, setInviteUrl] = React.useState<string | null>(null);
@@ -99,6 +101,36 @@ export function TeamManagement({ organizationName, roster, rosterError, actions,
   function requestCancel(invitation: TeamInvitation) {
     if (!canManage) return;
     setActionTarget(invitation); setActionKind('cancel'); setNotice(null); setActionError('');
+  }
+  async function handleResend(invite: TeamInvitation) {
+    if (previewReadOnly || !canManage || !actions?.resendInvite || resendingId) return;
+    setResendingId(invite.id);
+    setNotice(null);
+    setInviteUrl(null);
+    try {
+      const result = await actions.resendInvite({ invitationId: invite.id });
+      if (result.success) {
+        setNotice({
+          kind: 'success',
+          message: result.emailDelivered
+            ? `Invitation resent to ${invite.email}.`
+            : `New invitation link generated for ${invite.email}, but email could not be sent. Share the one-time link securely.`,
+        });
+        setInviteUrl(result.inviteUrl ?? null);
+      } else {
+        setNotice({
+          kind: 'error',
+          message: result.error || 'Failed to resend invitation.',
+        });
+      }
+    } catch {
+      setNotice({
+        kind: 'error',
+        message: 'The invitation could not be resent. Try again.',
+      });
+    } finally {
+      setResendingId(null);
+    }
   }
   async function confirmAction() {
     if (!actionTarget || !actions || !canManage || busy) return;
@@ -149,7 +181,7 @@ export function TeamManagement({ organizationName, roster, rosterError, actions,
 
     <section aria-labelledby="pending-heading" className="min-w-0 border border-brand-line bg-white">
       <div className="flex flex-col gap-3 border-b border-brand-line p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><h2 id="pending-heading" className="text-base font-semibold text-brand-navy">Invitations</h2><p className="mt-1 text-sm text-slate-500">People invited to join this workspace.</p></div>{roster ? <div className="flex flex-wrap gap-2" aria-label={`${currentInvites.length} pending invitations and ${expiredInvites.length} expired invitations`}><span className="border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-900">{currentInvites.length} pending</span><span className="border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-900">{expiredInvites.length} expired</span></div> : <span className="border border-slate-200 px-2 py-1 text-xs text-slate-600">Unavailable</span>}</div>
-      <div className="divide-y divide-slate-100">{[...currentInvites, ...expiredInvites].map((invite) => { const expired = new Date(invite.expiresAt).valueOf() <= Date.now(); return <div key={invite.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="min-w-0"><p className="truncate text-sm font-medium text-brand-navy">{invite.email}</p><p className="mt-1 text-xs text-slate-500">{invite.roleName} <span className="px-1 text-slate-300">·</span> {invite.branchName || 'All branches'}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="flex items-center gap-3"><Status status={expired ? 'expired' : 'pending'} /><span className="text-xs text-slate-500">{expired ? `Expired ${dateLabel(invite.expiresAt)}` : `Expires ${dateLabel(invite.expiresAt)}`}</span></div><Button variant="outline" size="sm" disabled={!canManage} aria-describedby={!canManage ? mutationHelpId : undefined} onClick={() => requestCancel(invite)}>Cancel</Button></div></div>; })}
+      <div className="divide-y divide-slate-100">{[...currentInvites, ...expiredInvites].map((invite) => { const expired = new Date(invite.expiresAt).valueOf() <= Date.now(); return <div key={invite.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="min-w-0"><p className="truncate text-sm font-medium text-brand-navy">{invite.email}</p><p className="mt-1 text-xs text-slate-500">{invite.roleName} <span className="px-1 text-slate-300">·</span> {invite.branchName || 'All branches'}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="flex items-center gap-3"><Status status={expired ? 'expired' : 'pending'} /><span className="text-xs text-slate-500">{expired ? `Expired ${dateLabel(invite.expiresAt)}` : `Expires ${dateLabel(invite.expiresAt)}`}</span></div><div className="flex items-center gap-2">{actions?.resendInvite && <Button variant="outline" size="sm" disabled={!canManage || resendingId === invite.id} isLoading={resendingId === invite.id} aria-describedby={!canManage ? mutationHelpId : undefined} onClick={() => handleResend(invite)}>Resend</Button>}<Button variant="outline" size="sm" disabled={!canManage || resendingId === invite.id} aria-describedby={!canManage ? mutationHelpId : undefined} onClick={() => requestCancel(invite)}>Cancel</Button></div></div></div>; })}
         {invites.length === 0 && <div className="px-6 py-8 text-sm text-slate-500">{roster ? 'No pending invitations.' : 'Invitation list unavailable.'}</div>}
       </div>
     </section>

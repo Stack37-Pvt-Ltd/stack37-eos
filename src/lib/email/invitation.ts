@@ -98,7 +98,9 @@ My Business by STACK37`;
 
 /**
  * Dispatch an invitation email.
- * In local/testing, forwards to local Mailpit (port 54324) if accessible.
+ * - In production/preview, uses Resend.com API when RESEND_API_KEY is configured.
+ * - In local development, forwards to local Mailpit (port 54324) if accessible.
+ * - In unit test environment, stays isolated and omits real HTTP calls.
  * Fails gracefully and returns { delivered: false, error } so caller can take appropriate action.
  */
 export async function sendInvitationEmail(
@@ -108,11 +110,65 @@ export async function sendInvitationEmail(
   const text = renderInvitationEmailText(options);
   const subject = `You have been invited to join ${options.organizationName} on STACK37`;
 
-  const mailpitBaseUrl = process.env.MAILPIT_URL || (process.env.NODE_ENV === 'test' ? null : 'http://127.0.0.1:54324');
-  if (!mailpitBaseUrl) {
-    return { delivered: false, error: 'Mailpit omitted in unit test environment' };
+  if (process.env.NODE_ENV === 'test') {
+    return { delivered: false, error: 'Email delivery omitted in unit test environment' };
   }
 
+  // 1. Resend.com API when RESEND_API_KEY is configured
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const fromEmail = process.env.INVITATION_FROM_EMAIL || 'Stack37 <noreply@stack37.com>';
+      const templateId = process.env.RESEND_INVITATION_TEMPLATE_ID;
+      const payload = templateId
+        ? {
+            from: fromEmail,
+            to: [options.to],
+            subject,
+            template: {
+              id: templateId,
+              variables: {
+                INVITER_NAME: options.inviterName,
+                ORGANIZATION_NAME: options.organizationName,
+                ROLE_NAME: options.roleName,
+                BRANCH_NAME: options.branchName,
+                INVITE_URL: options.actionUrl,
+              },
+            },
+          }
+        : {
+            from: fromEmail,
+            to: [options.to],
+            subject,
+            html,
+            text,
+          };
+
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (res.ok) {
+        return { delivered: true };
+      } else {
+        const errText = await res.text().catch(() => 'Resend API error');
+        return { delivered: false, error: `Resend rejected message: ${errText}` };
+      }
+    } catch (err) {
+      return {
+        delivered: false,
+        error: err instanceof Error ? err.message : 'Resend mail delivery failed',
+      };
+    }
+  }
+
+  // 2. Local Mailpit fallback
+  const mailpitBaseUrl = process.env.MAILPIT_URL || 'http://127.0.0.1:54324';
   try {
     const res = await fetch(`${mailpitBaseUrl}/api/v1/send`, {
       method: 'POST',

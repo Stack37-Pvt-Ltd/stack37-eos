@@ -43,6 +43,7 @@ const SHARED_AUTH_PREFIXES = [
   '/select-organization',
   '/registration',
   '/auth',
+  '/invite/accept',
 ];
 
 const SENSITIVE_QUERY_PARAMS = new Set([

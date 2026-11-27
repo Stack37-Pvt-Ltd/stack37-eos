@@ -5,6 +5,7 @@ import {
   cancelInvitationAction,
   getTeamRoster,
   inviteStaffAction,
+  resendStaffInvitationAction,
   revokeStaffAccessAction,
   updateStaffAssignmentAction,
 } from '../../../../../lib/actions/team';
@@ -75,6 +76,16 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
     return response;
   }
 
+  async function resendInvite(input: { invitationId: string }) {
+    'use server';
+    if (process.env.VERCEL_ENV === 'preview') return { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' };
+    const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
+    if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
+    const response = await resendStaffInvitationAction(currentAccess.context.organization.id, input.invitationId);
+    if (response.success) revalidatePath(teamRoutePath);
+    return response;
+  }
+
   async function updateAssignment(input: { membershipId: string; roleId: string; branchId: string }) {
     'use server';
     if (process.env.VERCEL_ENV === 'preview') return { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' };
@@ -93,6 +104,7 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
       previewReadOnly={process.env.VERCEL_ENV === 'preview'}
       actions={{
         invite,
+        resendInvite,
         updateMember,
         cancelInvitation,
         updateAssignment,

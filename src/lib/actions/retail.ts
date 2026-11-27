@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '../supabase/server';
 import {
   AdjustInventorySchema,
+  BulkOpeningStockSchema,
   CompleteRetailCheckoutSchema,
   SearchRetailCustomersSchema,
   UpdateRetailCommissionRatesSchema,
@@ -225,6 +226,52 @@ export async function adjustInventoryAction(rawInput: unknown): Promise<RetailAc
   if (error || !data) return { success: false, error: error?.message || 'The stock adjustment could not be saved.' };
   await revalidateRetailPaths(supabase, organizationId);
   return { success: true, data: data as { quantity: number } };
+}
+
+export async function recordBulkOpeningStockAction(
+  rawInput: unknown
+): Promise<RetailActionResult<{ updatedCount: number }>> {
+  const previewBlock = previewMutationBlocked();
+  if (previewBlock) return { success: false, error: previewBlock.error };
+
+  const parsed = BulkOpeningStockSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Check the stocktake items and quantities.',
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const { organizationId, branchId, items } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  const payload = items.map((item) => ({
+    product_id: item.productId,
+    quantity: item.quantity,
+  }));
+
+  const { data, error } = await supabase.rpc('bulk_record_opening_stock', {
+    p_organization_id: organizationId,
+    p_branch_id: branchId,
+    p_items: payload,
+  });
+
+  if (error || !data) {
+    return {
+      success: false,
+      error: error?.message || 'The opening stocktake could not be saved.',
+    };
+  }
+
+  const result = data as { success: boolean; updated_count: number };
+  await revalidateRetailPaths(supabase, organizationId);
+
+  return {
+    success: true,
+    data: { updatedCount: result.updated_count },
+  };
 }
 
 async function revalidateRetailPaths(supabase: Awaited<ReturnType<typeof createClient>>, organizationId: string) {

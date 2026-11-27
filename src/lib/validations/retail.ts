@@ -76,3 +76,23 @@ export const UpdateStaffAssignmentSchema = z.object({
   branchId: z.string().uuid(),
 });
 export type UpdateStaffAssignmentInput = z.infer<typeof UpdateStaffAssignmentSchema>;
+
+export const BulkOpeningStockItemSchema = z.object({
+  productId: z.string().uuid(),
+  quantity: z
+    .number()
+    .finite()
+    .min(0, 'Quantity must be at least 0.')
+    .max(1000000, 'Quantity cannot exceed 1,000,000.')
+    .refine(
+      (value) => Math.abs(value * 1000 - Math.round(value * 1000)) < 1e-8,
+      'Use no more than 3 decimal places.'
+    ),
+}).strict();
+
+export const BulkOpeningStockSchema = z.object({
+  organizationId: z.string().uuid(),
+  branchId: z.string().uuid(),
+  items: z.array(BulkOpeningStockItemSchema).min(1, 'Provide at least one stock item.').max(5000, 'Batch cannot exceed 5000 items.'),
+}).strict();
+export type BulkOpeningStockInput = z.infer<typeof BulkOpeningStockSchema>;

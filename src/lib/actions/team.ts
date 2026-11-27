@@ -30,11 +30,12 @@ export type ActionResponse<T = Record<string, unknown>> = {
   emailConfirmationRequired?: boolean;
   emailDelivered?: boolean;
   emailDeliveryError?: string;
+  data?: T;
 } & Partial<T>;
 
-function previewMutationBlocked(): ActionResponse | null {
+function previewMutationBlocked<T = never>(): ActionResponse<T> | null {
   return process.env.VERCEL_ENV === 'preview'
-    ? { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' }
+    ? ({ success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' } as ActionResponse<T>)
     : null;
 }
 
@@ -895,6 +896,152 @@ export async function cancelInvitationAction(
   });
 
   return { success: true };
+}
+
+/**
+ * Resend a staff invitation, rotating the token and dispatching email via Resend
+ */
+export async function resendStaffInvitationAction(
+  organizationId: string,
+  invitationId: string
+): Promise<ActionResponse<{ delivered: boolean; inviteUrl: string }>> {
+  const previewBlock = previewMutationBlocked();
+  if (previewBlock) return previewBlock;
+
+  if (!organizationId || !invitationId) {
+    return { success: false, error: 'Missing organization or invitation identifier.' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'Authentication required.' };
+  }
+
+  const authCheck = await assertTeamManagerPermission(supabase, organizationId, user.id);
+  if (!authCheck.authorized) {
+    return { success: false, error: 'Unauthorized: Manager permission required.' };
+  }
+
+  // Fetch the existing pending invitation
+  const { data: existingInvite, error: fetchErr } = await supabase
+    .from('invitations')
+    .select('id, email, role_id, branch_id, status, roles(name), branches(name)')
+    .eq('organization_id', organizationId)
+    .eq('id', invitationId)
+    .maybeSingle();
+
+  if (fetchErr || !existingInvite) {
+    return { success: false, error: 'The invitation was not found.' };
+  }
+
+  if (existingInvite.status !== 'pending') {
+    return {
+      success: false,
+      error: 'Only pending invitations can be resent.',
+    };
+  }
+
+  const roleName = (existingInvite.roles as unknown as { name: string } | null)?.name || 'Staff Member';
+  const branchName = (existingInvite.branches as unknown as { name: string } | null)?.name || 'Headquarters';
+
+  // Generate new token & 7-day expiration
+  const { rawToken, tokenHash } = generateInvitationToken();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  let newInvitationId: string = existingInvite.id;
+
+  if (typeof (supabase as unknown as { rpc?: unknown }).rpc === 'function') {
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('create_invitation', {
+      p_org_id: organizationId,
+      p_email: existingInvite.email,
+      p_token_hash: tokenHash,
+      p_role_id: existingInvite.role_id,
+      p_branch_id: existingInvite.branch_id,
+      p_expires_at: expiresAt,
+    });
+
+    if (rpcError || !rpcResult) {
+      return { success: false, error: rpcError?.message || 'Failed to rotate invitation token.' };
+    }
+    newInvitationId = rpcResult as string;
+  } else {
+    // Fallback for mock environments
+    await supabase
+      .from('invitations')
+      .update({ status: 'revoked' })
+      .eq('id', existingInvite.id);
+
+    const { data: newInviteRecord, error: insertError } = await supabase
+      .from('invitations')
+      .insert({
+        organization_id: organizationId,
+        email: existingInvite.email,
+        token_hash: tokenHash,
+        role_id: existingInvite.role_id,
+        branch_id: existingInvite.branch_id,
+        status: 'pending',
+        expires_at: expiresAt,
+      })
+      .select('id')
+      .single();
+
+    if (insertError || !newInviteRecord) {
+      return { success: false, error: 'Failed to record rotated invitation.' };
+    }
+    newInvitationId = newInviteRecord.id;
+
+    await logTeamAuditEvent(supabase, {
+      organizationId,
+      actorId: user.id,
+      action: 'team.invitation_resent',
+      resourceType: 'invitation',
+      resourceId: newInvitationId,
+      metadata: {
+        email: existingInvite.email,
+        expiresAt,
+      },
+    });
+  }
+
+  // Fetch organization metadata for link & email
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('name, slug')
+    .eq('id', organizationId)
+    .maybeSingle();
+
+  const orgName = org?.name || 'STACK37 Workspace';
+  const orgSlug = org?.slug || 'workspace';
+  const origin = await getTrustedOrigin();
+  const inviteUrl = `${origin}/invite/accept?token=${rawToken}`;
+
+  const inviterName = user.user_metadata?.full_name || user.email || 'An administrator';
+  const emailResult = await sendInvitationEmail({
+    to: existingInvite.email,
+    organizationName: orgName,
+    inviterName,
+    roleName,
+    branchName,
+    actionUrl: inviteUrl,
+    expiryDays: '7 days',
+  });
+
+  revalidatePath(`/tenant/${orgSlug}/settings/team`);
+
+  return {
+    success: true,
+    data: {
+      delivered: emailResult.delivered,
+      inviteUrl,
+    },
+    emailDelivered: emailResult.delivered,
+    emailDeliveryError: emailResult.delivered ? undefined : (emailResult.error || 'Failed to dispatch email.'),
+    inviteUrl,
+  };
 }
 
 /** Replace a member's assigned role and branch through the audited Task 16 RPC. */

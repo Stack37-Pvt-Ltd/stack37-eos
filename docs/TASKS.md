@@ -1,8 +1,8 @@
 # STACK37 EOS — Task Register & Agent History
 
-**Product:** STACK37 EOS / My Business by STACK37  
-**Governance:** Chief Executive Officer, STACK37 (Pvt) Ltd  
-**Document Status:** Live Operational Task Register  
+**Product:** STACK37 EOS / My Business by STACK37
+**Governance:** Chief Executive Officer, STACK37 (Pvt) Ltd
+**Document Status:** Live Operational Task Register
 
 ---
 
@@ -44,7 +44,8 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 | **TASK-STAB-005C** | **Focused Backend Corrections**<br>Integrate approved Settings permission and Standard trial-plan corrections. | Antigravity author; Codex integration | P0 | **ACCEPTED — CEO SIGN-OFF (2026-11-16)** | Two backend files, three unit-test files, corrections integration report |
 | **TASK-STAB-005** | **Integrated Verification**<br>Joint verification across backend safeguards and aligned UI; real database/authentication gates pending. | Joint (Antigravity + Codex) | P0 | **ACCEPTED — LOCAL-ONLY; REAL-SERVICE RELEASE GATE OPEN** | Local frontend/backend files, unit tests, governance and verification records |
 | **TASK-PROD-LOGIN-001** | **Production Login Screen & Central Routing**<br>Direct central portal root (`mybusiness.stack37.com/`) to `/login`, preserving tenant subdomain routing and direct `/registration`. | Joint (Backend: Antigravity; Frontend: Codex) | P0 | **READY_FOR_REVIEW — BACKEND ROUTING COMPLETE** | `src/proxy.ts`<br>`tests/unit/proxy-routing.test.ts` |
-| **TASK-UK-SUPER-005** | **Complete Retail Module Integrations**<br>Feature-by-feature full-stack connection of the remaining UK Super sections. | ChatGPT Codex (full-stack, CEO-directed) | P1 | **IN_PROGRESS — 005A READY_FOR_REVIEW; 005B updated per CEO direction** | Barcode POS, split tenders, discounts, optional customer details, provider commission settings; other retail sections queued |
+| **TASK-UK-SUPER-005** | **Complete Retail Module Integrations**<br>Feature-by-feature full-stack connection of the remaining UK Super sections. | Google Antigravity (Unified Engineering Owner) | P1 | **IN_PROGRESS — 005A & 005B READY_FOR_REVIEW in Preview** | Barcode POS, split tenders, discounts, optional customer details, provider commission settings; other retail sections queued |
+| **TASK-CONSOL-001** | **Unified Branch Consolidation**<br>Consolidate verified feature branches (`task-uk-super-004-ops`, `task-team-002-preview`, and `main`) into a single authoritative release candidate `release/v1-unified`. | Google Antigravity | P0 | **READY_FOR_REVIEW — CONSOLIDATION VERIFIED (301 TESTS)** | `src/proxy.ts`<br>`docs/integration/*`<br>`tests/unit/*`<br>Unified branch `release/v1-unified` |
 
 *Note: Milestone 2 (Team Collaboration) and all ERP modules are blocked until Tasks STAB-001 through STAB-005 are accepted.*
 
@@ -273,6 +274,52 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 * **Verification/authorization gates:** Local verification covered discounts over 20%, single/split tenders, exact total mismatch, idempotent replay/mismatch, optional customer phone persistence, barcode exact-match/repeated scan, and stock rollback. CEO authorized the shared migration and Preview release on 2026-11-16. Migration version `20261116123829` is applied to Supabase project `xbiadendaxhoyrcvaybf`. Commit `c33669064ebabe9279c2024ee6aa2c347b7951c2` is pushed and deployed as Vercel Preview `dpl_3ktdXN9vbQa7Yppe7rBjwEet4G3k` at `https://stack37-9kk73a4lc-stack37.vercel.app`. The Retail and Settings URLs return the sign-in page when checked without an app session, as expected. No Production deployment.
 * **Implementation and evidence (2026-11-16):** Implemented barcode/cart checkout, split tenders, 20% cashier discount cap, optional customer name/phone, printable receipts, and atomic stock deduction. Business Settings has Primary-Owner-only Uber/PickMe commission fields with no default. Provider rates apply to the matching payment portion, are saved as sale snapshots, and are shown as commission and expected payout without changing the customer total. Provider payments are blocked until that provider’s rate is set. **297/297 unit tests across 26 files pass;** isolated PGlite integration, TypeScript, scoped ESLint, and `git diff --check` passed before release. The live migration was applied successfully and verified in migration history; both tender/settlement tables, both organization rate columns, and checkout/customer/rate RPCs are present. New tender tables have RLS enabled. The three new/updated RPC signatures were checked: anonymous execution is denied, authenticated execution is granted, and each has an empty fixed search path. Supabase advisors still show general warnings for authenticated `SECURITY DEFINER` RPCs and two older mutable-search-path functions; broad database security review is not marked complete. The Preview build is READY. Signed-in sale/settings flow and 375px review remain for CEO review; no checkout or customer data was created during release verification.
 
+#### TASK-UK-SUPER-005H — Resend.com Email Delivery, Token Rotation, Catalog Publishing, and Bulk Opening Stocktake
+* **Owner:** Google Antigravity (Unified Engineering Owner)
+* **Status:** `READY_FOR_REVIEW — CEO-authorized live migration applied to Supabase, 314/314 tests passing`
+* **Authorized scope:**
+  1. Wire Resend.com into `src/lib/email/invitation.ts` using `process.env.RESEND_API_KEY`, Bearer authorization, custom from address (`noreply@stack37.com`), and graceful Mailpit fallback in development.
+  2. Implement `resendStaffInvitationAction` in `src/lib/actions/team.ts` with manager permission enforcement, atomic token rotation, and audit logging.
+  3. Add `Resend` button in `src/components/tenant/team-management.tsx` with loading feedback and delivery status.
+  4. Implement `publishCleanDraftsAction` in `src/lib/inventory/product-staging.ts` and add a "Publish Clean Drafts" action button with live status feedback in `src/components/tenant/product-draft-review.tsx`.
+  5. Author migration `supabase/migrations/20261128000001_task_uk_super_005h_opening_stock.sql` introducing `public.bulk_record_opening_stock` with `SECURITY DEFINER`, `SET search_path = ''`, tenant and branch access checks, `inventory_balances` upsert, `stock_movements` tracking, and audit logging.
+  6. Add `recordBulkOpeningStockAction` in `src/lib/actions/retail.ts` and an "Opening Stocktake" drawer/panel in `src/components/tenant/retail-live-workspace.tsx` featuring zero-stock quick filtering and quick-fill capability.
+* **Declared file scope:**
+  - `src/lib/email/invitation.ts`
+  - `src/lib/actions/team.ts`
+  - `src/components/tenant/team-management.tsx`
+  - `src/app/tenant/[tenantSlug]/settings/team/page.tsx`
+  - `src/lib/inventory/product-staging.ts`
+  - `src/components/tenant/product-draft-review.tsx`
+  - `supabase/migrations/20261128000001_task_uk_super_005h_opening_stock.sql`
+  - `src/lib/validations/retail.ts`
+  - `src/lib/actions/retail.ts`
+  - `src/components/tenant/retail-live-workspace.tsx`
+  - `tests/unit/resend-email.test.ts`
+  - `tests/unit/team-resend-action.test.ts`
+  - `tests/unit/bulk-opening-stock.test.ts`
+  - `eslint.config.mjs`
+* **Verification Evidence:**
+  - 314/314 unit tests passing across 33 files (`npm run test:unit`).
+  - TypeScript typecheck passed cleanly with 0 errors (`npm run typecheck`).
+  - ESLint passed cleanly with 0 errors and 0 warnings (`npm run lint`).
+  - Migration `20261128000001_task_uk_super_005h_opening_stock.sql` applied to hosted Supabase (`xbiadendaxhoyrcvaybf`), verified via `pg_proc` with `search_path=""`.
+
+#### TASK-UK-SUPER-005I — Security Hardening of Legacy Function Search Paths
+* **Owner:** Google Antigravity (Unified Engineering Owner)
+* **Status:** `READY_FOR_REVIEW — CEO-authorized live migration applied to Supabase, 314/314 tests passing`
+* **Authorized scope:**
+  1. Redefine legacy trigger functions `public.handle_new_user()`, `public.check_organization_owner()`, and `public.check_org_provisioned_owner()` with `SECURITY DEFINER`, `SET search_path = ''`, and fully schema-qualified identifiers.
+  2. Author migration `supabase/migrations/20261128000002_harden_legacy_function_search_paths.sql`.
+  3. Verify with PGlite unit test and verify on hosted Supabase that `Function Search Path Mutable` warnings are cleared from Supabase Security Advisors.
+* **Declared file scope:**
+  - `supabase/migrations/20261128000002_harden_legacy_function_search_paths.sql`
+  - `tests/unit/legacy-function-hardening.test.ts`
+* **Verification Evidence:**
+  - Applied to hosted Supabase project `xbiadendaxhoyrcvaybf`.
+  - Verified via `pg_proc.proconfig` that all functions report `search_path=""`.
+  - Supabase Security Advisors verified: `Function Search Path Mutable` warning type is 100% cleared.
+
 ### TASK-PROD-LOGIN-001: Production Login Screen & Central Routing
 * **Owner:** Joint (Google Antigravity: Backend Routing & Auth Contracts; ChatGPT Codex: Frontend Sign-in Experience)
 * **Status:** `READY_FOR_REVIEW — BACKEND ROUTING COMPLETE`
@@ -290,6 +337,31 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
   - TypeScript typecheck passing with 0 errors (`npm run typecheck`).
   - Scoped ESLint passing cleanly on touched files (`npx eslint src/proxy.ts tests/unit/proxy-routing.test.ts`).
   - `git diff --check` clean.
+
+---
+
+### TASK-CONSOL-001: Unified Branch Consolidation
+* **Owner:** Google Antigravity (Unified Engineering Owner)
+* **Status:** `READY_FOR_REVIEW — CONSOLIDATION VERIFIED (301 TESTS)`
+* **Scope:**
+  - Create single authoritative candidate branch `release/v1-unified` directly from master feature branch `codex/task-uk-super-004-ops`.
+  - Reconcile and port remaining test suites and routing additions from `codex/task-team-002-preview`:
+    - Add `'/invite/accept'` to `SHARED_AUTH_PREFIXES` in `src/proxy.ts`.
+    - Import `tests/unit/organization-switcher.test.tsx`, `tests/unit/workspace-directory.test.tsx`, and `tests/unit/workspace-paths.test.ts`.
+    - Preserve `docs/integration/TASK-TEAM-002-preview-host-handoff.md`.
+  - Execute full regression verification:
+    - `npm run test:unit` (301/301 PASS across 29 test files).
+    - `npm run typecheck` (0 errors).
+    - `npx eslint src tests` (0 warnings/errors).
+    - `git diff --check` (0 whitespace errors).
+* **Expected Customer Result:** Single, consolidated, fully-tested release candidate codebase unifying Foundation, Retail Operations, Barcode POS Checkout, Split Tenders, Customer Directory, and Team Management.
+* **Files Affected:** `src/proxy.ts`, `tests/unit/organization-switcher.test.tsx`, `tests/unit/workspace-directory.test.tsx`, `tests/unit/workspace-paths.test.ts`, `docs/integration/TASK-TEAM-002-preview-host-handoff.md`, `PROJECT_STATE.md`, `docs/TASKS.md`, `AGENTS.md`.
+* **Verification Evidence:**
+  - 301 / 301 unit tests passing across 29 test files (`npm run test:unit`).
+  - TypeScript typecheck passing cleanly (`npm run typecheck`).
+  - ESLint passing cleanly on `src` and `tests` (`npx eslint src tests`).
+  - `git diff --check` clean.
+  - Zero unapproved remote changes; ready for CEO final review and fast-forward merge into `main`.
 
 ---
 

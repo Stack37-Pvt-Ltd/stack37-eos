@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '../supabase/server';
 
 export const REVIEW_FLAGS = [
@@ -184,6 +185,64 @@ export async function publishProductDraftsAction(
     return { success: true, data: data as PublishDraftsResult };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to publish product drafts';
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Publish all clean (unflagged) or resolved product drafts for an organization.
+ */
+export async function publishCleanDraftsAction(
+  organizationId: string,
+  options?: { autoGenerateSku?: boolean; skuPrefix?: string }
+): Promise<{ success: boolean; data?: PublishDraftsResult; error?: string }> {
+  try {
+    if (process.env.VERCEL_ENV === 'preview') {
+      return { success: false, error: 'Publishing products is disabled in Preview to protect shared live business data.' };
+    }
+
+    const supabase = await createClient();
+
+    // Query drafts that are eligible for publishing:
+    // status is not 'rejected' and not 'published',
+    // and either status is 'resolved' or review_flags is empty
+    const { data: eligibleDrafts, error: fetchError } = await supabase
+      .from('product_drafts')
+      .select('id, review_flags, status')
+      .eq('organization_id', organizationId)
+      .neq('status', 'rejected')
+      .neq('status', 'published');
+
+    if (fetchError) {
+      return { success: false, error: fetchError.message };
+    }
+
+    const draftIds = (eligibleDrafts || [])
+      .filter((d) => d.status === 'resolved' || !d.review_flags || d.review_flags.length === 0)
+      .map((d) => d.id);
+
+    if (draftIds.length === 0) {
+      return { success: false, error: 'No clean or resolved drafts are available to publish.' };
+    }
+
+    const result = await publishProductDraftsAction(organizationId, draftIds, options);
+
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('slug')
+      .eq('id', organizationId)
+      .maybeSingle();
+
+    if (org?.slug) {
+      revalidatePath(`/tenant/${org.slug}/retail`);
+      revalidatePath(`/w/${encodeURIComponent(org.slug)}/retail`);
+      revalidatePath(`/tenant/${org.slug}/inventory/drafts`);
+      revalidatePath(`/w/${encodeURIComponent(org.slug)}/inventory/drafts`);
+    }
+
+    return result;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to publish clean drafts';
     return { success: false, error: msg };
   }
 }

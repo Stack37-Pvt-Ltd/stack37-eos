@@ -1,15 +1,15 @@
 # STACK37 EOS — Current Project State & Operational Snapshot
 
-**Last updated:** November 16, 2026 (Asia/Colombo)
-**Branch:** `codex/task-uk-super-004-ops` (isolated UK Super worktree; remote branch contains the Preview implementation)
-**Current tasks:** `TASK-UK-SUPER-004` — READY_FOR_REVIEW; CEO reports the signed-in desktop and 375px Preview review complete, but formal acceptance is not recorded. `TASK-UK-SUPER-005` — IN_PROGRESS under the CEO-directed Codex full-stack reassignment; `005A` is READY_FOR_REVIEW and `005B` is READY_FOR_REVIEW on Preview. The 005B migration is applied and commit `c336690` is deployed to READY Preview `dpl_3ktdXN9vbQa7Yppe7rBjwEet4G3k` at https://stack37-9kk73a4lc-stack37.vercel.app. Authenticated workflow and 375px CEO review remain. Production remains unauthorized.
-**Evidence:** Preview deployment `dpl_G8tdGNxJ7T1GDMY4cjvarFukYeRH` is READY at `https://stack37-otrijjxcm-stack37.vercel.app`. The frontend interconnection passes 275/275 unit tests across 20 files, TypeScript, scoped ESLint, and `git diff --check`. CEO formally accepted TASK-STAB-005C on November 16, 2026. This acceptance adds no live database or authentication evidence.
+**Last updated:** November 22, 2026 (Asia/Colombo)
+**Branch:** `release/v1-unified` (Unified candidate branch consolidating Retail Operations, Team Management, and Main baseline)
+**Current tasks:** `TASK-CONSOL-001` — READY_FOR_REVIEW (Consolidated release candidate assembled and verified locally; awaiting CEO review for merge to `main`). `TASK-UK-SUPER-005` — 005A and 005B deployed in Preview and ready for review; subsequent retail modules queued. Production remains gated.
+**Evidence:** 301/301 unit tests passing across 29 test files, TypeScript (`tsc --noEmit`) clean with 0 errors, scoped ESLint passing with 0 warnings/errors, and `git diff --check` passing with 0 whitespace errors. Remote database migrations 01–16, 005A, and 005B applied to Supabase project `xbiadendaxhoyrcvaybf`. 2,079 drafts staged, 0 published products, stock = 0, 0 real SMS sent.
 
 ---
 
 ## Product and ownership
 
-STACK37 EOS is commercially branded **My Business by STACK37**. Under the CEO-directed reassignment on November 16, 2026, Codex owns end-to-end engineering delivery, including frontend, backend, database schema, authorization, and tests. Google Antigravity is not assigned. Development proceeds feature by feature. The CEO retains product/business-policy authority and the existing Git synchronization, live-database, and Production deployment gates.
+STACK37 EOS is commercially branded **My Business by STACK37**. Following CEO directive on November 22, 2026, Google Antigravity owns unified end-to-end engineering delivery, including frontend/UI, backend business logic, database schema/RLS, and quality assurance. ChatGPT Codex is no longer active. The CEO retains absolute final authority over product scope and business policies, UI/UX approvals, Git synchronization, live database operations, and Production deployment.
 
 The approved TASK-STAB-003 visual direction is recorded in [docs/DESIGN_STANDARDS.md](docs/DESIGN_STANDARDS.md) and its full reference in [docs/references/TASK-STAB-003-approved-design.html](docs/references/TASK-STAB-003-approved-design.html).
 
@@ -27,6 +27,9 @@ The approved TASK-STAB-003 visual direction is recorded in [docs/DESIGN_STANDARD
 | TASK-STAB-005 Integrated verification | ACCEPTED — CEO approved the local-only report; real database, RLS, rollback and authentication verification remains an open release gate |
 | TASK-PROD-LOGIN-001 Production login screen & routing | READY_FOR_REVIEW — Backend routing correction complete (`src/proxy.ts` redirects `mybusiness.stack37.com/` to `/login`, preserving tenant subdomains and direct `/registration`; 198 unit tests passing) |
 | TASK-UK-SUPER-005 Retail module integrations | IN_PROGRESS — 005A and 005B READY_FOR_REVIEW; further modules remain queued |
+| TASK-CONSOL-001 Unified Branch Consolidation | READY_FOR_REVIEW — Consolidated `codex/task-uk-super-004-ops`, `codex/task-team-002-preview`, and `main` into `release/v1-unified`; 301/301 unit tests, TypeScript, ESLint pass |
+| TASK-UK-SUPER-005H Opening Stocktake & Resend Flow | READY_FOR_REVIEW — Resend.com dispatch, invitation token rotation, catalog publishing, and bulk opening stocktake implemented; migrations applied to hosted Supabase; 314/314 unit tests, TypeScript, ESLint pass |
+| TASK-UK-SUPER-005I Legacy Function Search Path Hardening | READY_FOR_REVIEW — Search path pinned to '' on handle_new_user, check_organization_owner, check_org_provisioned_owner; applied to Supabase; Security Advisor warnings cleared |
 
 Future product modules and milestones in [docs/ROADMAP.md](docs/ROADMAP.md) retain their existing scope and status. TASK-UK-SUPER-005 remains the previously CEO-authorized retail work; its features are being delivered one at a time.
 
