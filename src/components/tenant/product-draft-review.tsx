@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { createClient } from '../../lib/supabase/client';
-import { publishCleanDraftsAction } from '../../lib/inventory/product-staging';
+import { publishCleanDraftsAction } from '../../lib/actions/product-staging';
 
 const PAGE_SIZE = 20;
 
