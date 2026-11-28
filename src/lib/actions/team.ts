@@ -43,8 +43,13 @@ async function getTrustedOrigin(): Promise<string> {
     const host = headerList.get('host') || 'localhost:3000';
     const [hostname, rawPort] = host.split(':');
     const isLocal = hostname.endsWith('localhost') || hostname === '127.0.0.1';
+    const isVercel = hostname.endsWith('.vercel.app');
     const port = rawPort && /^\d+$/.test(rawPort) ? `:${rawPort}` : '';
-    return isLocal ? `http://mybusiness.localhost${port}` : 'https://mybusiness.stack37.com';
+    if (isLocal) return `http://mybusiness.localhost${port}`;
+    if (isVercel || (hostname && hostname !== 'stack37.com' && !hostname.endsWith('.stack37.com'))) {
+      return `https://${hostname}${port}`;
+    }
+    return 'https://mybusiness.stack37.com';
   } catch {
     return process.env.NEXT_PUBLIC_SITE_URL || 'http://mybusiness.localhost:3000';
   }
