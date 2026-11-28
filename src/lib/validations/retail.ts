@@ -96,3 +96,41 @@ export const BulkOpeningStockSchema = z.object({
   items: z.array(BulkOpeningStockItemSchema).min(1, 'Provide at least one stock item.').max(5000, 'Batch cannot exceed 5000 items.'),
 }).strict();
 export type BulkOpeningStockInput = z.infer<typeof BulkOpeningStockSchema>;
+
+export const CreateCustomProductSchema = z.object({
+  organizationId: z.string().uuid(),
+  branchId: z.string().uuid().nullable().optional(),
+  name: z.string().trim().min(1, 'Product name is required.').max(200),
+  sellingPrice: z.number().finite().min(0, 'Selling price must be 0 or greater.'),
+  costPrice: z.number().finite().min(0, 'Cost price must be 0 or greater.').optional().default(0),
+  barcode: z.string().trim().max(100).nullable().optional(),
+  sku: z.string().trim().max(100).nullable().optional(),
+  categoryName: z.string().trim().max(100).nullable().optional(),
+  initialStock: z.number().finite().min(0).max(1000000).optional().default(0),
+}).strict();
+export type CreateCustomProductInput = z.infer<typeof CreateCustomProductSchema>;
+
+export const UpdateCustomProductSchema = z.object({
+  organizationId: z.string().uuid(),
+  productId: z.string().uuid(),
+  name: z.string().trim().min(1, 'Product name is required.').max(200),
+  sellingPrice: z.number().finite().min(0, 'Selling price must be 0 or greater.'),
+  costPrice: z.number().finite().min(0, 'Cost price must be 0 or greater.').nullable().optional(),
+  barcode: z.string().trim().max(100).nullable().optional(),
+  sku: z.string().trim().max(100).nullable().optional(),
+  categoryName: z.string().trim().max(100).nullable().optional(),
+}).strict();
+export type UpdateCustomProductInput = z.infer<typeof UpdateCustomProductSchema>;
+
+export const DeactivateCustomProductSchema = z.object({
+  organizationId: z.string().uuid(),
+  productId: z.string().uuid(),
+}).strict();
+export type DeactivateCustomProductInput = z.infer<typeof DeactivateCustomProductSchema>;
+
+export const GetCashierSalesMetricsSchema = z.object({
+  organizationId: z.string().uuid(),
+  branchId: z.string().uuid(),
+}).strict();
+export type GetCashierSalesMetricsInput = z.infer<typeof GetCashierSalesMetricsSchema>;
+

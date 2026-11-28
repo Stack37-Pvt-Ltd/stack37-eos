@@ -6,7 +6,11 @@ import {
   AdjustInventorySchema,
   BulkOpeningStockSchema,
   CompleteRetailCheckoutSchema,
+  CreateCustomProductSchema,
+  DeactivateCustomProductSchema,
+  GetCashierSalesMetricsSchema,
   SearchRetailCustomersSchema,
+  UpdateCustomProductSchema,
   UpdateRetailCommissionRatesSchema,
   UpsertRetailCustomerSchema,
 } from '../validations/retail';
@@ -279,3 +283,111 @@ async function revalidateRetailPaths(supabase: Awaited<ReturnType<typeof createC
     revalidatePath(`/w/${encodeURIComponent(organization.slug)}/retail`);
   }
 }
+
+export async function createCustomProductAction(rawInput: unknown): Promise<RetailActionResult<Record<string, unknown>>> {
+  const parsed = CreateCustomProductSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { success: false, error: 'Check product details.', fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const { organizationId, branchId, name, sellingPrice, costPrice, barcode, sku, categoryName, initialStock } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  const { data, error } = await supabase.rpc('create_custom_product', {
+    p_organization_id: organizationId,
+    p_name: name,
+    p_selling_price: sellingPrice,
+    p_cost_price: costPrice,
+    p_barcode: barcode || null,
+    p_sku: sku || null,
+    p_category_name: categoryName || null,
+    p_branch_id: branchId || null,
+    p_initial_stock: initialStock,
+  });
+
+  if (error || !data) {
+    return { success: false, error: error?.message || 'Product could not be created.' };
+  }
+
+  await revalidateRetailPaths(supabase, organizationId);
+  return { success: true, data: data as Record<string, unknown> };
+}
+
+export async function updateCustomProductAction(rawInput: unknown): Promise<RetailActionResult<Record<string, unknown>>> {
+  const parsed = UpdateCustomProductSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { success: false, error: 'Check product details.', fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+  const { organizationId, productId, name, sellingPrice, costPrice, barcode, sku, categoryName } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  const { data, error } = await supabase.rpc('update_custom_product', {
+    p_organization_id: organizationId,
+    p_product_id: productId,
+    p_name: name,
+    p_selling_price: sellingPrice,
+    p_cost_price: costPrice ?? null,
+    p_barcode: barcode || null,
+    p_sku: sku || null,
+    p_category_name: categoryName || null,
+  });
+
+  if (error || !data) {
+    return { success: false, error: error?.message || 'Product could not be updated.' };
+  }
+
+  await revalidateRetailPaths(supabase, organizationId);
+  return { success: true, data: data as Record<string, unknown> };
+}
+
+export async function deactivateCustomProductAction(rawInput: unknown): Promise<RetailActionResult<{ success: boolean; productId: string }>> {
+  const parsed = DeactivateCustomProductSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid product.' };
+  }
+  const { organizationId, productId } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  const { data, error } = await supabase.rpc('deactivate_custom_product', {
+    p_organization_id: organizationId,
+    p_product_id: productId,
+  });
+
+  if (error || !data) {
+    return { success: false, error: error?.message || 'Product could not be removed.' };
+  }
+
+  await revalidateRetailPaths(supabase, organizationId);
+  return { success: true, data: data as { success: boolean; productId: string } };
+}
+
+export async function getCashierSalesMetricsAction(rawInput: unknown): Promise<RetailActionResult<{
+  salesToday: number;
+  grossSalesToday: number;
+  salesYesterday: number;
+  mySalesCountToday: number;
+  totalSalesCount: number;
+  currency: string;
+}>> {
+  const parsed = GetCashierSalesMetricsSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return { success: false, error: 'Invalid branch parameters.' };
+  }
+  const { organizationId, branchId } = parsed.data;
+  const { supabase, error: accessError } = await verifyActiveMember(organizationId);
+  if (accessError) return { success: false, error: accessError };
+
+  const { data, error } = await supabase.rpc('get_cashier_sales_metrics', {
+    p_organization_id: organizationId,
+    p_branch_id: branchId,
+  });
+
+  if (error || !data) {
+    return { success: false, error: error?.message || 'Could not load sales metrics.' };
+  }
+
+  return { success: true, data: data as any };
+}
+

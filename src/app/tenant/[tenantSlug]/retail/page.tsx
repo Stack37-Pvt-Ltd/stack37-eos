@@ -41,7 +41,7 @@ export default async function RetailOperationsPage(props: {
 
   const supabase = await createClient();
   let branches: Array<{ id: string; name: string }> = [];
-  let products: Array<{ id: string; name: string; sku: string; barcode: string | null; selling_price: number; quantity: number }> = [];
+  let products: Array<{ id: string; name: string; sku: string; barcode: string | null; selling_price: number; cost_price?: number; category_name?: string; quantity: number }> = [];
   let dashboard: { salesToday: number; grossSalesToday: number; itemsSoldToday: number; activeProducts: number; lowStockProducts: number; pendingDraftReviews: number; currency: string } | null = null;
   let loadError: string | undefined;
   let inventoryPermission = false;
@@ -69,13 +69,19 @@ export default async function RetailOperationsPage(props: {
     const branchId = branches.find((branch) => branch.id === requestedBranch)?.id || branches[0]?.id || null;
     if (branchId) {
       const [{ data: catalog, error: catalogError }, { data: balances, error: balanceError }, { data: totals, error: totalsError }] = await Promise.all([
-        supabase.from('products').select('id, name, sku, barcode, selling_price').eq('organization_id', organization.id).eq('is_active', true).order('name').limit(1000),
+        supabase.from('products').select('id, name, sku, barcode, selling_price, cost_price, category_name').eq('organization_id', organization.id).eq('is_active', true).order('name').limit(2000),
         supabase.from('inventory_balances').select('product_id, quantity').eq('organization_id', organization.id).eq('branch_id', branchId),
         supabase.rpc('get_retail_dashboard', { p_organization_id: organization.id, p_branch_id: branchId }),
       ]);
       if (catalogError) throw catalogError; if (balanceError) throw balanceError; if (totalsError) throw totalsError;
       const quantityByProduct = new Map((balances || []).map((balance) => [balance.product_id, Number(balance.quantity)]));
-      products = (catalog || []).map((product) => ({ ...product, selling_price: Number(product.selling_price), quantity: quantityByProduct.get(product.id) || 0 }));
+      products = (catalog || []).map((product) => ({
+        ...product,
+        selling_price: Number(product.selling_price),
+        cost_price: product.cost_price != null ? Number(product.cost_price) : undefined,
+        category_name: product.category_name || undefined,
+        quantity: quantityByProduct.get(product.id) || 0,
+      }));
       dashboard = totals as typeof dashboard;
     }
     if (!branches.length) loadError = 'No branch is assigned to this account.';
@@ -84,5 +90,5 @@ export default async function RetailOperationsPage(props: {
   }
   const requestedBranch = typeof searchParams.branch === 'string' ? searchParams.branch : null;
   const branchId = branches.find((branch) => branch.id === requestedBranch)?.id || branches[0]?.id || null;
-  return <RetailLiveWorkspace organizationId={organization.id} organizationSlug={organization.slug} organizationName={organization.name} branchId={branchId} branches={branches} products={products} dashboard={dashboard} inventoryPermission={inventoryPermission} salesPermission={salesPermission} customerReadPermission={customerReadPermission} customerManagePermission={customerManagePermission} customerWritesEnabled={process.env.VERCEL_ENV !== 'preview'} uberCommissionRate={configuration?.organization.uberCommissionRate ?? null} pickmeCommissionRate={configuration?.organization.pickmeCommissionRate ?? null} loadError={loadError} />;
+  return <RetailLiveWorkspace organizationId={organization.id} organizationSlug={organization.slug} organizationName={organization.name} branchId={branchId} branches={branches} products={products} dashboard={dashboard} isOwner={membership.is_owner} inventoryPermission={inventoryPermission} salesPermission={salesPermission} customerReadPermission={customerReadPermission} customerManagePermission={customerManagePermission} customerWritesEnabled={process.env.VERCEL_ENV !== 'preview'} uberCommissionRate={configuration?.organization.uberCommissionRate ?? null} pickmeCommissionRate={configuration?.organization.pickmeCommissionRate ?? null} loadError={loadError} />;
 }
