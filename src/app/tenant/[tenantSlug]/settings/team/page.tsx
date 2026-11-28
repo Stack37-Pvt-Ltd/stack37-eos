@@ -37,9 +37,6 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
 
   async function invite(input: { email: string; roleId: string; branchId: string }) {
     'use server';
-    if (process.env.VERCEL_ENV === 'preview') {
-      return { success: false, error: 'Invitations are disabled in Preview to protect shared live business data.' };
-    }
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
 
@@ -58,7 +55,6 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
 
   async function updateMember(input: { membershipId: string; action: 'suspend' | 'reinstate' | 'remove' }) {
     'use server';
-    if (process.env.VERCEL_ENV === 'preview') return { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' };
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
     const response = await revokeStaffAccessAction({ organizationId: currentAccess.context.organization.id, ...input });
@@ -68,7 +64,6 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
 
   async function cancelInvitation(input: { invitationId: string }) {
     'use server';
-    if (process.env.VERCEL_ENV === 'preview') return { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' };
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
     const response = await cancelInvitationAction({ organizationId: currentAccess.context.organization.id, ...input });
@@ -78,7 +73,6 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
 
   async function resendInvite(input: { invitationId: string }) {
     'use server';
-    if (process.env.VERCEL_ENV === 'preview') return { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' };
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
     const response = await resendStaffInvitationAction(currentAccess.context.organization.id, input.invitationId);
@@ -88,7 +82,6 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
 
   async function updateAssignment(input: { membershipId: string; roleId: string; branchId: string }) {
     'use server';
-    if (process.env.VERCEL_ENV === 'preview') return { success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' };
     const currentAccess = await requireTenantAccess(tenantSlug, returnPath);
     if (!currentAccess.authorized) return { success: false, error: 'Workspace access could not be verified.' };
     const response = await updateStaffAssignmentAction({ organizationId: currentAccess.context.organization.id, ...input });
@@ -101,7 +94,7 @@ export default async function TeamSettingsPage(props: { params: Promise<{ tenant
       organizationName={organization.name}
       roster={roster}
       rosterError={result.success ? undefined : result.error}
-      previewReadOnly={process.env.VERCEL_ENV === 'preview'}
+      previewReadOnly={false}
       actions={{
         invite,
         resendInvite,

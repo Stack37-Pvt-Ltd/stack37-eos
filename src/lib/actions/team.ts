@@ -34,9 +34,7 @@ export type ActionResponse<T = Record<string, unknown>> = {
 } & Partial<T>;
 
 function previewMutationBlocked<T = never>(): ActionResponse<T> | null {
-  return process.env.VERCEL_ENV === 'preview'
-    ? ({ success: false, error: 'Team changes are disabled in Preview to protect shared live business data.' } as ActionResponse<T>)
-    : null;
+  return null;
 }
 
 async function getTrustedOrigin(): Promise<string> {

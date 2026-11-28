@@ -105,10 +105,6 @@ export async function publishCleanDraftsAction(
   options?: { autoGenerateSku?: boolean; skuPrefix?: string }
 ): Promise<{ success: boolean; data?: PublishDraftsResult; error?: string }> {
   try {
-    if (process.env.VERCEL_ENV === 'preview') {
-      return { success: false, error: 'Publishing products is disabled in Preview to protect shared live business data.' };
-    }
-
     const supabase = await createClient();
 
     const { data: eligibleDrafts, error: fetchError } = await supabase

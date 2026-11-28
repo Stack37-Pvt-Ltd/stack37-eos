@@ -24,9 +24,6 @@ export default async function AcceptInvitationPage(props: { searchParams: Promis
 
   async function accept(input: { fullName: string; password: string }) {
     'use server';
-    if (process.env.VERCEL_ENV === 'preview') {
-      return { success: false, error: 'Invitation acceptance is disabled in Preview to protect shared live business data.' };
-    }
     if (!tokenValue) return { success: false, error: 'This invitation link is incomplete.' };
     const result = await acceptInvitationAction({ token: tokenValue, ...input });
     if (result.success && result.organizationSlug) {
@@ -41,8 +38,8 @@ export default async function AcceptInvitationPage(props: { searchParams: Promis
       invitation={invitation}
       token={tokenValue}
       authenticatedEmail={user?.email ?? null}
-      previewReadOnly={process.env.VERCEL_ENV === 'preview'}
-      onAccept={process.env.VERCEL_ENV === 'preview' ? undefined : accept}
+      previewReadOnly={false}
+      onAccept={accept}
     />
   </div>;
 }

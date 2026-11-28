@@ -364,4 +364,26 @@ describe('Next.js 16 Routing Proxy & Security Controls', () => {
     const res = await proxy(req);
     expect(res.headers.get('Cache-Control')).toBeNull();
   });
+
+  it('correctly rewrites /w/:slug on Vercel preview host (*.vercel.app)', async () => {
+    const req = new NextRequest('https://stack37-hjjpbyo13-stack37.vercel.app/w/uk-super', {
+      headers: { host: 'stack37-hjjpbyo13-stack37.vercel.app' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('x-middleware-rewrite')).toContain('/tenant/uk-super');
+    expect(req.headers.get('x-pathname')).toBe('/w/uk-super');
+    expect(req.headers.get('x-tenant-slug')).toBe('uk-super');
+  });
+
+  it('redirects /w on Vercel preview host to /select-organization preserving preview host', async () => {
+    const req = new NextRequest('https://stack37-hjjpbyo13-stack37.vercel.app/w', {
+      headers: { host: 'stack37-hjjpbyo13-stack37.vercel.app' },
+    });
+    const res = await proxy(req);
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('https://stack37-hjjpbyo13-stack37.vercel.app/select-organization');
+  });
 });

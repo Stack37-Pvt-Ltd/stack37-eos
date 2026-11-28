@@ -52,8 +52,6 @@ export async function updateRetailCommissionRatesAction(rawInput: unknown): Prom
 
 function previewMutationBlocked(scope: 'customer' | 'sale' | 'inventory' = 'inventory'): RetailActionResult | null {
   if (process.env.VERCEL_ENV !== 'preview') return null;
-  // The CEO approved live Preview customer and POS writes for TASK-UK-SUPER-005A.
-  // Stock adjustments remain blocked; POS sales continue to decrement stock atomically.
   return scope === 'customer' || scope === 'sale'
     ? null
     : { success: false, error: 'Inventory adjustments are disabled in Preview to protect shared live stock.' };

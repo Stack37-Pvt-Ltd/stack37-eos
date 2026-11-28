@@ -62,10 +62,12 @@ export default async function proxy(request: NextRequest) {
   const host = request.headers.get('host') || '';
   const [hostname, port] = host.split(':');
   const deploymentHost = process.env.VERCEL_URL?.trim().toLowerCase();
+  const isVercelHost = hostname.endsWith('.vercel.app');
   const isExactVercelPreview =
-    process.env.VERCEL_ENV === 'preview' &&
-    Boolean(deploymentHost) &&
-    host.toLowerCase() === deploymentHost;
+    isVercelHost ||
+    (process.env.VERCEL_ENV === 'preview' &&
+      Boolean(deploymentHost) &&
+      host.toLowerCase() === deploymentHost);
 
   // In production, enforce domain logic. For local, handle localhost
   const isLocalhost = hostname.endsWith('localhost') || hostname === 'localhost';
@@ -74,7 +76,7 @@ export default async function proxy(request: NextRequest) {
   // Subdomain parsing
   let subdomain = '';
   if (isExactVercelPreview) {
-    // Treat only this deployment's exact Vercel Preview hostname as the portal host.
+    // Treat any Vercel Preview hostname as the portal host.
     subdomain = 'mybusiness';
   } else if (hostname.endsWith(`.${baseDomain}`)) {
     subdomain = hostname.replace(`.${baseDomain}`, '');
@@ -115,7 +117,7 @@ export default async function proxy(request: NextRequest) {
 
   const portSuffix = port ? `:${port}` : '';
   const canonicalPortalOrigin = isExactVercelPreview
-    ? `https://${deploymentHost}`
+    ? `https://${host}`
     : isLocalhost
       ? `http://mybusiness.localhost${portSuffix}`
       : 'https://mybusiness.stack37.com';

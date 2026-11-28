@@ -235,5 +235,10 @@ describe('Server-Side Tenant Membership Guard & Multi-Organization Management', 
       const url = getTenantWorkspaceUrl('acmecorp', 'mybusiness.stack37.com');
       expect(url).toBe('https://mybusiness.stack37.com/w/acmecorp');
     });
+
+    it('constructs correct preview portal URL preserving Vercel preview host', () => {
+      const url = getTenantWorkspaceUrl('uk-super', 'stack37-hjjpbyo13-stack37.vercel.app');
+      expect(url).toBe('https://stack37-hjjpbyo13-stack37.vercel.app/w/uk-super');
+    });
   });
 });
