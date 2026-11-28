@@ -274,6 +274,31 @@ To ensure seamless collaboration across **Google Antigravity** (Backend Owner), 
 * **Verification/authorization gates:** Local verification covered discounts over 20%, single/split tenders, exact total mismatch, idempotent replay/mismatch, optional customer phone persistence, barcode exact-match/repeated scan, and stock rollback. CEO authorized the shared migration and Preview release on 2026-11-16. Migration version `20261116123829` is applied to Supabase project `xbiadendaxhoyrcvaybf`. Commit `c33669064ebabe9279c2024ee6aa2c347b7951c2` is pushed and deployed as Vercel Preview `dpl_3ktdXN9vbQa7Yppe7rBjwEet4G3k` at `https://stack37-9kk73a4lc-stack37.vercel.app`. The Retail and Settings URLs return the sign-in page when checked without an app session, as expected. No Production deployment.
 * **Implementation and evidence (2026-11-16):** Implemented barcode/cart checkout, split tenders, 20% cashier discount cap, optional customer name/phone, printable receipts, and atomic stock deduction. Business Settings has Primary-Owner-only Uber/PickMe commission fields with no default. Provider rates apply to the matching payment portion, are saved as sale snapshots, and are shown as commission and expected payout without changing the customer total. Provider payments are blocked until that provider’s rate is set. **297/297 unit tests across 26 files pass;** isolated PGlite integration, TypeScript, scoped ESLint, and `git diff --check` passed before release. The live migration was applied successfully and verified in migration history; both tender/settlement tables, both organization rate columns, and checkout/customer/rate RPCs are present. New tender tables have RLS enabled. The three new/updated RPC signatures were checked: anonymous execution is denied, authenticated execution is granted, and each has an empty fixed search path. Supabase advisors still show general warnings for authenticated `SECURITY DEFINER` RPCs and two older mutable-search-path functions; broad database security review is not marked complete. The Preview build is READY. Signed-in sale/settings flow and 375px review remain for CEO review; no checkout or customer data was created during release verification.
 
+#### TASK-UK-SUPER-005I — Dedicated Cashier POS Station, Real-Time Inventory CRUD, and Draft Clean-up
+* **Owner:** Google Antigravity (Unified Engineering Owner)
+* **Status:** `READY_FOR_REVIEW — Database migration applied to live Supabase, 318 unit tests passing, Next.js 16 build passing, and committed to main.`
+* **Scope & Delivery:**
+  1. **Lightning-Fast Dedicated Cashier POS Station (Inspired by TCloudEats):**
+     - Top live sales metrics bar: Today's gross sales & sales count, Yesterday's sales, Total store sales, and live Colombo clock.
+     - Horizontal category filter pills ("All", "Dairy & Eggs", "Beverages", etc.) for instant non-network catalog filtering.
+     - Fast O(1) in-memory barcode & SKU indexing with hardware keyboard-wedge auto-focus.
+     - Dedicated "UK Super Bill" cart with quantity adjustment, 1-click `[Remove Item]` trash button, and `[Clear Bill]` button.
+     - Cash tender change calculator (computes return change live from amount tendered).
+     - Quick discount percentage pills (0%, 5%, 10%, 15%, 20%).
+     - Owner stock balance visibility toggle (`Show / Hide Stock`).
+  2. **Inventory Management CRUD:**
+     - "Add Product" modal: name, selling price, cost price, barcode, SKU, category, and initial stock with atomic balance creation.
+     - "Edit Product" modal: real-time updates to prices, category, name, barcode, and SKU.
+     - "Remove Product" confirmation modal: soft-delete (`is_active = false`).
+     - Real-time catalog search bar filtering inventory rows by name, SKU, barcode, and category.
+  3. **Product Drafts Clean-up:**
+     - Removed raw JSON file labels (e.g. `UK Super Stock.json`) and replaced with clean `Draft Item #{draft.source_id}`.
+  4. **Database Migration & RPCs (`20261128000003`):**
+     - Authored and applied `public.create_custom_product`, `public.update_custom_product`, `public.deactivate_custom_product`, and `public.get_cashier_sales_metrics` to remote Supabase project `xbiadendaxhoyrcvaybf`.
+  5. **Verification Evidence:**
+     - 318 / 318 tests passing across 34 test files (including new PGlite tests for migration 003).
+     - Full production build compiles in Turbopack in 17s with 0 errors.
+
 #### TASK-UK-SUPER-005H — Resend.com Email Delivery, Token Rotation, Catalog Publishing, and Bulk Opening Stocktake
 * **Owner:** Google Antigravity (Unified Engineering Owner)
 * **Status:** `READY_FOR_REVIEW — CEO-authorized live migration applied to Supabase, 314/314 tests passing`
